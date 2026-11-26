@@ -160,11 +160,11 @@ Comandos de verificación, desde la raíz del repositorio:
 | S2-T03 | RN-05, RF-11 | 10 disparos seguidos en 20 pasos; un disparo más | El undécimo publica DisparoSinEnergia, no publica DisparoRealizado y la energía no cambia |
 | S2-T04 | RN-04 | Energía 90 y esperar 1 s; esperar 1 s más | 98; después 100, sin superar la máxima |
 | S2-T05 | RN-04 | Recarga con la barra pulsada | La energía sube igual que sin apuntar |
-| S2-T06 | RN-38, RF-32 | Barra pulsada 0,75 s, 1,5 s y 3 s | Progreso de apuntado 0,5; 1; 1. Mira de 3° con progreso 0 y de 0,5° con progreso 1; nunca menor |
+| S2-T06 | RN-38, RF-32 | Barra pulsada 0,5 s, 1 s y 2 s | Progreso de apuntado 0,5; 1; 1. Mira de 2,5° con progreso 0 y de 0,5° con progreso 1; nunca menor |
 | S2-T07 | RN-38 | Soltar la barra con progreso 1 | A los 0,1 s el progreso está entre 0 y 1; a los 0,2 s es 0 |
-| S2-T08 | RN-39 | Apuntar 1,5 s con `armamento` y `vista` conectados | `vista` recibe ApuntadoCambiado y su campo de visión es 25° |
-| S2-T09 | RN-37 | 10 000 disparos con la mira normal y semilla fija | Todos dentro de 3° de la dirección de la mira. Ángulo medio de 2° (±0,05°). Un 25 % (±1,5 %) dentro de 1,5° |
-| S2-T10 | RN-37 | 10 000 disparos con la mira mínima | Todos dentro de 0,5° |
+| S2-T08 | RN-39 | Apuntar 1 s con `armamento` y `vista` conectados | `vista` recibe ApuntadoCambiado y su campo de visión es 25° |
+| S2-T09 | RN-37 | 100 disparos con la mira normal | Todos exactamente en la dirección de la mira |
+| S2-T10 | RN-37 | 100 disparos con la mira a medio reducir y con la mira mínima | Todos exactamente en la dirección de la mira |
 | S2-T11 | RN-23, RNF-05 | Soltar la barra en el paso N | DisparoRealizado se publica en el paso N |
 | S2-T12 | Cancelar el apuntado | Cancelar con la barra pulsada y soltar; pulsar y soltar otra vez | El primer suelte no dispara y el progreso vuelve a 0; el segundo dispara |
 | S2-T13 | RN-32 | 1000 apariciones con semilla fija | Distancia entre 900 y 1000 u; hay apariciones en los 8 octantes |
@@ -175,7 +175,7 @@ Comandos de verificación, desde la raíz del repositorio:
 | S2-T18 | RN-29 | 6 enemigos durante 300 s simulados | Cada enemigo cambia de dirección en horizontal y en vertical |
 | S2-T19 | RN-07 | Enemigo mediano a 500 u justo delante; dos disparos en la dirección exacta | EnemigoAlcanzado con vida 10; después EnemigoDestruido con su posición, y deja de estar en la lista |
 | S2-T20 | Impacto, el más cercano | Dos enemigos alineados a 300 y 600 u | Solo se daña el de 300 u |
-| S2-T21 | Impacto, esfera | Enemigo a 500 u desplazado 11 u y 13 u del eje del disparo (radio 12 u) | Con 11 u hay impacto; con 13 u no |
+| S2-T21 | Impacto, esfera | Enemigo a 500 u desplazado 17 u y 19 u del eje del disparo (radio 18 u) | Con 17 u hay impacto; con 19 u no |
 | S2-T22 | Impacto, sentido | Enemigo justo detrás de la estación | El disparo no lo alcanza |
 | S2-T23 | Limpieza | PartidaIniciada o PartidaAbandonada con enemigos activos | No quedan enemigos |
 | S2-T24 | RN-43, RF-09 | Oleada 10 (8 enemigos) sin destruir ninguno | Nunca hay más de una SolicitudAparicion cada 2 s. A los 12 s hay 6 activos y 2 pendientes |
@@ -263,13 +263,13 @@ Cierra la fase 1.
 | ID | Comprueba | Escenario | Resultado esperado |
 |---|---|---|---|
 | S4-T01 | RN-06, RN-33 | Simular un enemigo de cada tamaño durante 300 s | Velocidad máxima observada ≤ 110, 70 y 40 u/s. Cambio de velocidad por paso ≤ 55, 35 y 20 u/s² × 1/60 s |
-| S4-T02 | RN-06, zona de impacto | Enemigo a 500 u desplazado del eje del disparo: pequeño a 5 y 7 u; grande a 23 y 25 u | Pequeño: impacto con 5 u y fallo con 7 u. Grande: impacto con 23 u y fallo con 25 u |
+| S4-T02 | RN-06, zona de impacto | Enemigo a 500 u desplazado del eje del disparo: pequeño a 9 y 11 u; grande a 31 y 33 u | Pequeño: impacto con 9 u y fallo con 11 u. Grande: impacto con 31 u y fallo con 33 u |
 | S4-T03 | RN-06, vida | Disparos exactos en nivel 1 | Pequeño: 1 disparo; mediano: 2; grande: 4 |
 | S4-T04 | RN-11 | ProyectilImpacta de cada tipo con integridad 100 | Sin efecto: 97; desestabilizador: 99; aturdidor: 98 |
 | S4-T05 | RN-12 | Impacto desestabilizador | DesestabilizacionIniciada (3 s) y DesestabilizacionTerminada 3 s después (±1 paso) |
 | S4-T06 | RN-12, renovación | Segundo impacto desestabilizador a los 2 s | Una sola DesestabilizacionTerminada, a los 5 s del primero |
 | S4-T07 | RN-12, desvío | Simular 3 s de desestabilización | La dirección de la mira se separa del centro, sin superar 2°. Entre dos pasos, el desvío cambia como máximo 30 °/s × 1/60 s = 0,5°. Al terminar, el desvío vuelve a 0 |
-| S4-T08 | RN-12, disparo desviado | 1000 disparos durante la desestabilización | Cada dirección cae dentro del cono de la mira alrededor de la dirección desviada |
+| S4-T08 | RN-12, disparo desviado | 1000 disparos durante la desestabilización | Cada disparo va exactamente en la dirección desviada de la mira |
 | S4-T09 | RN-13, giro | Impacto aturdidor y flecha derecha pulsada 1,5 s | La orientación no cambia durante el aturdimiento; vuelve a girar después de AturdimientoTerminado |
 | S4-T10 | RN-13, disparo | Soltar la barra durante el aturdimiento | No hay DisparoRealizado ni DisparoSinEnergia |
 | S4-T11 | RN-38 | Aturdimiento con la barra pulsada | El progreso de apuntado vuelve a 0. Tras el aturdimiento, con la barra aún pulsada, no se apunta ni se dispara hasta soltarla y pulsarla otra vez |

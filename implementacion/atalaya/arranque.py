@@ -43,9 +43,9 @@ def montar(
     nucleo = Nucleo(semilla)
     entrada = Entrada(teclado, raton)
     vista = Vista(nucleo.bus, parametros)
-    armamento = Armamento(nucleo.bus, parametros, vista, nucleo.azar)
+    armamento = Armamento(nucleo.bus, parametros, vista)
     enemigos = Enemigos(nucleo.bus, parametros, nucleo.azar)
-    oleadas = Oleadas(nucleo.bus, parametros)
+    oleadas = Oleadas(nucleo.bus, parametros, nucleo.azar)
     estacion = Estacion(nucleo.bus, parametros)
     radar = Radar(parametros, vista, enemigos)
     flujo = Flujo(nucleo.bus, entrada, vista, armamento)
@@ -55,8 +55,7 @@ def montar(
     nucleo.registrar(Etapa.ARMAMENTO, armamento)
     nucleo.registrar(Etapa.ENEMIGOS, enemigos)
     nucleo.registrar(Etapa.OLEADAS, oleadas)
-    # `estacion` aún no tiene nada que actualizar en cada paso: los efectos con duración
-    # (aturdimiento y desestabilización) llegan en S4.
+    nucleo.registrar(Etapa.ESTACION, estacion)
     return Juego(nucleo, entrada, flujo, vista, armamento, enemigos, oleadas, estacion, radar)
 
 

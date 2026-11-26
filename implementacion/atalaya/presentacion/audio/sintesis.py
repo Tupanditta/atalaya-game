@@ -1,8 +1,8 @@
 """Efectos de sonido generados por código: recursos propios (`design.md`, sección 14).
 
-Versión mínima de S3. Cada función devuelve las muestras de un sonido mono entre −1 y 1;
-`a_wav` las convierte en un archivo WAV en memoria. Los sonidos definitivos en OGG llegan
-en S9 (`design.md`, sección 7).
+Versión mínima de S3, más el aturdimiento de S4. Cada función devuelve las muestras de
+un sonido mono entre −1 y 1; `a_wav` las convierte en un archivo WAV en memoria. Los
+sonidos definitivos en OGG llegan en S9 (`design.md`, sección 7).
 """
 
 import io
@@ -115,6 +115,23 @@ def alarma() -> list[float]:
         diente = 2 * ((t * frecuencia) % 1.0) - 1
         final = min(1.0, (d - t) / 0.03)
         return 0.3 * diente * final
+
+    return _muestras(d, onda)
+
+
+def aturdimiento() -> list[float]:
+    """Aturdimiento (RN-13): zumbido grave que baja y vibra, como un sistema que se apaga.
+
+    Dura 0,7 s, menos que el aturdimiento más corto, para no tapar el sonido de la partida.
+    """
+    d = 0.7
+    fase = _barrido(420.0, 90.0, d)
+
+    def onda(t: float) -> float:
+        # El temblor de amplitud a 14 Hz da la sensación de sistemas inestables.
+        temblor = 0.65 + 0.35 * math.sin(2 * math.pi * 14 * t)
+        tono = math.sin(fase(t)) + 0.35 * math.sin(2 * fase(t) + 0.5)
+        return 0.32 * tono * temblor * _envolvente(t, d, 0.02)
 
     return _muestras(d, onda)
 

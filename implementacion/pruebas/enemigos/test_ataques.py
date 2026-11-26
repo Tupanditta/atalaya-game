@@ -283,3 +283,23 @@ def test_proyectiles_en_orden_y_con_su_posicion_anterior(parametros: Parametros)
     assert avance == pytest.approx(parametros.ataques.velocidad_proyectil * PASO)
     assert producto_escalar(proyectil.posicion, proyectil.velocidad) < 0
     assert not math.isclose(norma(proyectil.posicion), 0)
+
+
+@pytest.mark.parametrize(
+    ("tipo", "recarga"),
+    [(TipoEnemigo.SIN_EFECTO, 4), (TipoEnemigo.DESESTABILIZADOR, 3), (TipoEnemigo.ATURDIDOR, 8)],
+    ids=lambda v: v.value if isinstance(v, TipoEnemigo) else str(v),
+)
+def test_s4_t14_rn14_recarga_por_tipo(
+    parametros: Parametros, tipo: TipoEnemigo, recarga: float
+) -> None:
+    """S4-T14 RN-14: recarga entre disparos de 4 s (sin efecto), 3 s y 8 s (aturdidor)."""
+    assert parametros.tipos.de(tipo).recarga == recarga
+    sim = Simulacion(_siempre_al_alcance(parametros))
+    sim.aparecer(tipo)
+    sim.avanzar(_pasos(40))
+    avisos = [p for p, _ in sim.de(AvisoDisparo)]
+    lanzados = [p for p, e in sim.de(ProyectilLanzado) if e.tipo_enemigo is tipo]
+    assert len(lanzados) >= 4
+    for lanzado, siguiente in zip(lanzados, avisos[1:], strict=False):
+        assert abs((siguiente - lanzado) - _pasos(recarga)) <= 1

@@ -138,8 +138,20 @@ def circulo(centro: Punto, radio: float, lados: int = 64) -> list[Punto]:
     ]
 
 
-def panel(padre: NodePath, x: float, y: float, ancho: float, alto: float, escala: float) -> None:
-    """Panel con dos esquinas recortadas, arriba a la izquierda y abajo a la derecha."""
+def panel(
+    padre: NodePath,
+    x: float,
+    y: float,
+    ancho: float,
+    alto: float,
+    escala: float,
+    relleno: Color | None = None,
+    borde: Color | None = None,
+) -> None:
+    """Panel con dos esquinas recortadas, arriba a la izquierda y abajo a la derecha.
+
+    Sin `relleno` ni `borde`, usa los colores fondo-panel y borde-panel de `interfaz.md`.
+    """
     recorte = 12
     puntos = [
         (x + recorte, y),
@@ -149,9 +161,11 @@ def panel(padre: NodePath, x: float, y: float, ancho: float, alto: float, escala
         (x, y + alto),
         (x, y + recorte),
     ]
-    poligono(padre, puntos, color("#0A1220", 0.78)).set_bin("fixed", ORDEN_PANEL)
-    borde = linea(padre, [*puntos, puntos[0]], color("#2AD4FF", 0.35), 1, escala)
-    borde.set_bin("fixed", ORDEN_PANEL + 1)
+    relleno = color("#0A1220", 0.78) if relleno is None else relleno
+    borde = color("#2AD4FF", 0.35) if borde is None else borde
+    poligono(padre, puntos, relleno).set_bin("fixed", ORDEN_PANEL)
+    contorno = linea(padre, [*puntos, puntos[0]], borde, 1, escala)
+    contorno.set_bin("fixed", ORDEN_PANEL + 1)
 
 
 class Texto:

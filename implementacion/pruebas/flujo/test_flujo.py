@@ -33,7 +33,7 @@ class AccionesFalsas:
 
 
 def _flujo(nucleo: Nucleo, parametros: Parametros, acciones: AccionesFalsas, vista: Vista) -> Flujo:
-    armamento = Armamento(nucleo.bus, parametros, vista, nucleo.azar)
+    armamento = Armamento(nucleo.bus, parametros, vista)
     return Flujo(nucleo.bus, acciones, vista, armamento)
 
 
@@ -130,7 +130,7 @@ def test_barra_espaciadora_llega_a_armamento(parametros: Parametros) -> None:
     nucleo = Nucleo(semilla=1)
     acciones = AccionesFalsas()
     vista = Vista(nucleo.bus, parametros)
-    armamento = Armamento(nucleo.bus, parametros, vista, nucleo.azar)
+    armamento = Armamento(nucleo.bus, parametros, vista)
     flujo = Flujo(nucleo.bus, acciones, vista, armamento)
     nucleo.registrar(Etapa.FLUJO, flujo)
     nucleo.registrar(Etapa.ARMAMENTO, armamento)
@@ -149,7 +149,7 @@ def _montar_con_armamento(
     nucleo = Nucleo(semilla=1)
     acciones = AccionesFalsas()
     vista = Vista(nucleo.bus, parametros)
-    armamento = Armamento(nucleo.bus, parametros, vista, nucleo.azar)
+    armamento = Armamento(nucleo.bus, parametros, vista)
     flujo = Flujo(nucleo.bus, acciones, vista, armamento)
     nucleo.registrar(Etapa.FLUJO, flujo)
     nucleo.registrar(Etapa.VISTA, vista)

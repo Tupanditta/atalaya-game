@@ -24,7 +24,7 @@ def test_s0_t09_carga_y_solo_lectura(parametros: Parametros) -> None:
 
 def test_consulta_por_tamano_tipo_y_mejora(parametros: Parametros) -> None:
     """Los grupos por tamaño, tipo y mejora se consultan con el vocabulario del dominio."""
-    assert parametros.tamanos.de(Tamano.GRANDE).radio_impacto == 24
+    assert parametros.tamanos.de(Tamano.GRANDE) is parametros.tamanos.grande
     assert parametros.tipos.de(TipoEnemigo.ATURDIDOR).recarga == 8
     assert parametros.mejoras.de(Mejora.GENERADOR).efecto == 1
 

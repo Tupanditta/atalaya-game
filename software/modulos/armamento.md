@@ -20,7 +20,7 @@ Gestionar la energía, la mira de precisión y el momento del disparo.
   - Al pasar la barra de pulsada a suelta:
     - Si el jugador está aturdido o el apuntado estaba cancelado, no dispara.
     - Si la energía no llega al coste del disparo, publica DisparoSinEnergia (RN-05).
-    - En otro caso, descuenta el coste, elige un punto al azar uniforme dentro del círculo de la mira (RN-37) alrededor de la dirección de la mira de `vista`, y publica DisparoRealizado.
+    - En otro caso, descuenta el coste y publica DisparoRealizado con la dirección de la mira de `vista`, sin dispersión (RN-37).
 - **Cancelar el apuntado:** lo usa `flujo` al pausar.
 - **Consultar:** energía actual y máxima, progreso de apuntado y tamaño de la mira.
 

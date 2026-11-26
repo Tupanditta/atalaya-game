@@ -8,6 +8,8 @@ import pytest
 from atalaya.arranque import montar
 from atalaya.logica.flujo import Pantalla
 from atalaya.logica.nucleo import PASO
+from atalaya.logica.nucleo.dominio import TipoEnemigo
+from atalaya.logica.nucleo.eventos import DisparoRealizado, ProyectilImpacta
 from atalaya.logica.parametros import Parametros
 
 
@@ -76,8 +78,8 @@ def test_s2_partida_con_enemigos_y_disparo(parametros: Parametros) -> None:
     assert enemigo.posicion != enemigo.posicion_anterior
     assert juego.oleadas.numero == 1
     teclado.teclas = {"space"}
-    # 1,5 s de apuntado; `vista` aplica el zoom en el paso siguiente.
-    for _ in range(91):
+    # El tiempo de apuntado completo; `vista` aplica el zoom en el paso siguiente.
+    for _ in range(round(parametros.jugador.tiempo_apuntado / PASO) + 1):
         juego.nucleo.avanzar(PASO)
     assert juego.armamento.progreso_apuntado == 1
     assert juego.vista.campo_vision == parametros.jugador.campo_vision_zoom
@@ -138,3 +140,27 @@ def test_wasd_y_clic(parametros: Parametros) -> None:
     teclado.teclas = set()
     juego.nucleo.avanzar(PASO)
     assert len(disparos) == 1
+
+
+def test_s4_aturdimiento_con_los_modulos_montados(parametros: Parametros) -> None:
+    """RN-13: un impacto aturdidor bloquea el giro y el disparo hasta que termina."""
+    teclado = TecladoFalso()
+    juego = montar(parametros, teclado, semilla=2)
+    disparos: list[DisparoRealizado] = []
+    juego.nucleo.bus.suscribir(DisparoRealizado, disparos.append)
+    juego.flujo.iniciar_partida()
+    juego.nucleo.bus.publicar(ProyectilImpacta(TipoEnemigo.ATURDIDOR))
+    juego.nucleo.avanzar(PASO)
+    assert juego.estacion.aturdido
+    inicial = juego.vista.orientacion
+    teclado.teclas = {"arrow_right", "space"}
+    juego.nucleo.avanzar(PASO)
+    teclado.teclas = {"arrow_right"}
+    for _ in range(round(1 / PASO)):
+        juego.nucleo.avanzar(PASO)
+    assert juego.vista.orientacion == inicial
+    assert disparos == []
+    for _ in range(round(1 / PASO)):
+        juego.nucleo.avanzar(PASO)
+    assert not juego.estacion.aturdido
+    assert juego.vista.orientacion != inicial

@@ -1,22 +1,24 @@
 """Energía, mira de precisión y disparo (`modulos/armamento.md`).
 
-El aturdimiento llega en S4 y las mejoras de batería y generador en S5.
+El disparo sale justo hacia el centro de la mira, sin dispersión (RN-37). Incluye el
+bloqueo del disparo por aturdimiento (RN-13, RN-38). Las mejoras de batería y generador
+llegan en S5.
 """
 
-import math
 from typing import Protocol
 
-from atalaya.logica.nucleo.azar import Azar
 from atalaya.logica.nucleo.bus import Bus
 from atalaya.logica.nucleo.dominio import Vector3
 from atalaya.logica.nucleo.eventos import (
     ApuntadoCambiado,
+    AturdimientoIniciado,
+    AturdimientoTerminado,
     DisparoRealizado,
     DisparoSinEnergia,
     EnergiaCambiada,
     PartidaIniciada,
 )
-from atalaya.logica.nucleo.vectores import CERO, girar_hacia
+from atalaya.logica.nucleo.vectores import CERO
 from atalaya.logica.parametros.modelo import Parametros
 
 #: Por debajo de esta diferencia, el progreso de apuntado se considera en su extremo.
@@ -31,29 +33,21 @@ class Mira(Protocol):
         """Dirección real de la mira en el mundo, de longitud 1."""
 
 
-def direccion_disparo(centro: Vector3, radio: float, azar: Azar) -> Vector3:
-    """Dirección al azar uniforme dentro del círculo de la mira (RN-37, `design.md` §5).
-
-    `radio` es el radio de la mira en grados alrededor de `centro`.
-    """
-    angulo = radio * math.sqrt(azar.aleatorio())
-    azimut = azar.uniforme(0.0, 360.0)
-    return girar_hacia(centro, angulo, azimut)
-
-
 class Armamento:
     """Energía del jugador, tamaño de la mira y momento del disparo."""
 
-    def __init__(self, bus: Bus, parametros: Parametros, mira: Mira, azar: Azar) -> None:
+    def __init__(self, bus: Bus, parametros: Parametros, mira: Mira) -> None:
         self._bus = bus
         self._jugador = parametros.jugador
         self._mira = mira
-        self._azar = azar
         self._energia = self._jugador.energia_maxima
         self._progreso = 0.0
         self._pulsada = False
         self._pulsada_antes = False
         self._cancelado = False
+        self._aturdido = False
+        bus.suscribir(AturdimientoIniciado, self._al_aturdir)
+        bus.suscribir(AturdimientoTerminado, self._al_terminar_aturdimiento)
         bus.suscribir(PartidaIniciada, self._al_iniciar_partida)
 
     # --- operaciones -----------------------------------------------------------------
@@ -68,8 +62,14 @@ class Armamento:
             self._cancelado = True
 
     def actualizar(self, dt: float) -> None:
-        """Recarga la energía, resuelve el disparo al soltar y ajusta la mira."""
+        """Recarga la energía, resuelve el disparo al soltar y ajusta la mira.
+
+        Aturdido, la barra pulsada no apunta: el apuntado queda cancelado hasta que se
+        suelte, también si se pulsó durante el aturdimiento (RN-13, RN-38).
+        """
         self._recargar(dt)
+        if self._aturdido:
+            self.cancelar_apuntado()
         if self._pulsada_antes and not self._pulsada:
             # La mira con la que se dispara es la del momento de soltar.
             if not self._cancelado:
@@ -101,6 +101,11 @@ class Armamento:
         j = self._jugador
         return j.mira_normal + (j.mira_minima - j.mira_normal) * self._progreso
 
+    @property
+    def aturdido(self) -> bool:
+        """Indica si el disparo está bloqueado por aturdimiento (RN-13)."""
+        return self._aturdido
+
     # --- internos --------------------------------------------------------------------
 
     def _recargar(self, dt: float) -> None:
@@ -115,8 +120,8 @@ class Armamento:
             self._bus.publicar(DisparoSinEnergia())
             return
         self._cambiar_energia(max(0.0, self._energia - coste))
-        direccion = direccion_disparo(self._mira.direccion_mira, self.radio_mira, self._azar)
-        self._bus.publicar(DisparoRealizado(CERO, direccion))
+        # Justo hacia el centro de la mira, con el desvío por desestabilización (RN-12, RN-37).
+        self._bus.publicar(DisparoRealizado(CERO, self._mira.direccion_mira))
 
     def _ajustar_mira(self, dt: float) -> None:
         j = self._jugador
@@ -137,7 +142,16 @@ class Armamento:
             self._energia = energia
             self._bus.publicar(EnergiaCambiada(energia, self._jugador.energia_maxima))
 
+    def _al_aturdir(self, evento: AturdimientoIniciado) -> None:
+        """La mira vuelve a su tamaño normal y no se dispara al soltar (RN-13, RN-38)."""
+        self._aturdido = True
+        self.cancelar_apuntado()
+
+    def _al_terminar_aturdimiento(self, evento: AturdimientoTerminado) -> None:
+        self._aturdido = False
+
     def _al_iniciar_partida(self, evento: PartidaIniciada) -> None:
+        self._aturdido = False
         self._energia = self._jugador.energia_maxima
         self._progreso = 0.0
         self._pulsada = False

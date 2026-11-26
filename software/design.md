@@ -53,9 +53,7 @@ Las versiones exactas se fijan en `implementacion/requirements.txt` (y `requirem
   - El cuaternión se normaliza en cada paso para evitar errores acumulados.
   - No se usan ángulos de Euler, que fallan al dar la vuelta vertical completa.
 - **Giro:** ángulo por paso = velocidad sin zoom × (campo de visión actual ÷ campo normal) × duración del paso (RN-40).
-- **Dispersión del disparo** (RN-37):
-  - Se elige un punto uniforme dentro del círculo de la mira: radio = radio de la mira × raíz cuadrada de un número al azar entre 0 y 1, y ángulo al azar.
-  - Ese punto se convierte en una dirección dentro del cono de la mira.
+- **Dirección del disparo** (RN-37): la dirección de la mira que da `vista`, sin dispersión. Incluye el desvío por desestabilización (RN-12).
 - **Impacto:** se calcula de forma exacta la intersección de la línea del disparo con la esfera de impacto de cada enemigo, y gana la más cercana. Con 6 enemigos activos como máximo, el coste es despreciable.
 - **Movimiento de los enemigos** (RN-33): comportamiento de persecución con aceleración y velocidad máximas, y frenado al acercarse al destino. Se limita a la capa entre la distancia mínima y la máxima.
 - **Proyectiles enemigos:** movimiento rectilíneo uniforme hacia el centro de la estación. Impactan al entrar en un radio de 5 u.

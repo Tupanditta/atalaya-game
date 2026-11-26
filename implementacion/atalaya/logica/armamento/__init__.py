@@ -3,6 +3,6 @@
 Ver `software/modulos/armamento.md`.
 """
 
-from atalaya.logica.armamento.armamento import Armamento, Mira, direccion_disparo
+from atalaya.logica.armamento.armamento import Armamento, Mira
 
-__all__ = ["Armamento", "Mira", "direccion_disparo"]
+__all__ = ["Armamento", "Mira"]

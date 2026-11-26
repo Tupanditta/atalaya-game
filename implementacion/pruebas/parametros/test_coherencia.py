@@ -32,7 +32,7 @@ ESPERADO: dict[tuple[str, str], Esperado] = {
     ("Jugador y estación", "Campo de visión con zoom máximo"): lambda p: [
         p.jugador.campo_vision_zoom
     ],
-    ("Jugador y estación", "Tamaño normal de la mira (radio de dispersión)"): lambda p: [
+    ("Jugador y estación", "Tamaño normal de la mira (radio del círculo)"): lambda p: [
         p.jugador.mira_normal
     ],
     ("Jugador y estación", "Tamaño mínimo de la mira"): lambda p: [p.jugador.mira_minima],

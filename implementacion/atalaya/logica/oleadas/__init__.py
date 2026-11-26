@@ -3,6 +3,6 @@
 Ver `software/modulos/oleadas.md`.
 """
 
-from atalaya.logica.oleadas.oleadas import EnemigoPendiente, Oleadas
+from atalaya.logica.oleadas.oleadas import EnemigoPendiente, Oleadas, componer_oleada
 
-__all__ = ["EnemigoPendiente", "Oleadas"]
+__all__ = ["EnemigoPendiente", "Oleadas", "componer_oleada"]

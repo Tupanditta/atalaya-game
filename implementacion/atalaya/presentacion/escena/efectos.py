@@ -85,7 +85,7 @@ class Rayo:
 
     def __init__(self, padre: NodePath, inicio: Vec3, fin: Vec3) -> None:
         self._nodo = padre.attach_new_node("rayo")
-        for grosor, alfa in ((9.0, 0.25), (3.0, 1.0)):
+        for grosor, alfa in ((16.0, 0.3), (5.0, 1.0)):
             linea = LineSegs("rayo")
             linea.set_thickness(grosor)
             linea.set_color(*_COLOR_RAYO, alfa)

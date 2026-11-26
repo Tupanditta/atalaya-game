@@ -322,10 +322,14 @@ def test_s2_t20_impacto_el_mas_cercano(parametros: Parametros) -> None:
     assert estado.vida == 20
 
 
-@pytest.mark.parametrize(("desvio", "acierta"), [(11.0, True), (13.0, False)])
-def test_s2_t21_impacto_esfera(parametros: Parametros, desvio: float, acierta: bool) -> None:
-    """S2-T21: la zona de impacto es una esfera con el radio del tamaño (12 u)."""
-    assert parametros.tamanos.mediano.radio_impacto == 12
+@pytest.mark.parametrize(("margen", "acierta"), [(-1.0, True), (1.0, False)])
+def test_s2_t21_impacto_esfera(parametros: Parametros, margen: float, acierta: bool) -> None:
+    """S2-T21: la zona de impacto es una esfera con el radio del tamaño.
+
+    Un enemigo mediano desplazado del eje 1 u menos que su radio recibe el disparo; 1 u
+    más, no.
+    """
+    desvio = parametros.tamanos.mediano.radio_impacto + margen
     enemigos, bus, registro = _enemigos(parametros)
     id = _aparecer(enemigos, bus, parametros)
     _colocar(enemigos, id, (desvio, 500.0, 0.0))
@@ -363,4 +367,80 @@ def test_s2_t23_limpieza(parametros: Parametros, evento: Evento) -> None:
     assert len(enemigos.activos) == 3
     bus.publicar(evento)
     bus.entregar()
+    assert enemigos.activos == ()
+
+
+# --- tamaños (Sprint 4) --------------------------------------------------------------
+
+
+def test_s4_t01_rn06_rn33_velocidad_y_aceleracion_por_tamano(
+    parametros: Parametros, trayectorias_tamanos: list[Trayectoria]
+) -> None:
+    """S4-T01 RN-06 RN-33: velocidad ≤ 110, 70 y 40 u/s; cambio por paso ≤ aceleración × 1/60 s."""
+    t = parametros.tamanos
+    assert (t.pequeno.velocidad_maxima, t.mediano.velocidad_maxima, t.grande.velocidad_maxima) == (
+        110,
+        70,
+        40,
+    )
+    assert (
+        t.pequeno.aceleracion_maxima,
+        t.mediano.aceleracion_maxima,
+        t.grande.aceleracion_maxima,
+    ) == (55, 35, 20)
+    maximas: dict[Tamano, float] = {}
+    for trayectoria in trayectorias_tamanos:
+        _comprobar_inercia(parametros, trayectoria)
+        rapidez = max(norma(v) for v in trayectoria.velocidades)
+        maximas[trayectoria.tamano] = max(maximas.get(trayectoria.tamano, 0.0), rapidez)
+    # Cada tamaño llega a su velocidad máxima: los pequeños van claramente más rápido.
+    for tamano, rapidez in maximas.items():
+        assert rapidez == pytest.approx(t.de(tamano).velocidad_maxima, rel=0.05)
+    assert maximas[Tamano.PEQUENO] > maximas[Tamano.MEDIANO] > maximas[Tamano.GRANDE]
+
+
+@pytest.mark.parametrize(
+    ("tamano", "margen", "acierta"),
+    [
+        (Tamano.PEQUENO, -1.0, True),
+        (Tamano.PEQUENO, 1.0, False),
+        (Tamano.GRANDE, -1.0, True),
+        (Tamano.GRANDE, 1.0, False),
+    ],
+)
+def test_s4_t02_rn06_zona_de_impacto_por_tamano(
+    parametros: Parametros, tamano: Tamano, margen: float, acierta: bool
+) -> None:
+    """S4-T02 RN-06: la zona de impacto de cada tamaño es una esfera con su radio.
+
+    A mayor tamaño, mayor zona de impacto. Desplazado del eje 1 u menos que su radio
+    recibe el disparo; 1 u más, no.
+    """
+    t = parametros.tamanos
+    assert t.pequeno.radio_impacto < t.mediano.radio_impacto < t.grande.radio_impacto
+    desvio = t.de(tamano).radio_impacto + margen
+    enemigos, bus, registro = _enemigos(parametros)
+    id = _aparecer(enemigos, bus, parametros, tamano)
+    _colocar(enemigos, id, (desvio, 500.0, 0.0))
+    _disparar(bus)
+    alcanzado = bool(registro.de(EnemigoAlcanzado) or registro.de(EnemigoDestruido))
+    assert alcanzado is acierta
+
+
+@pytest.mark.parametrize(
+    ("tamano", "disparos"), [(Tamano.PEQUENO, 1), (Tamano.MEDIANO, 2), (Tamano.GRANDE, 4)]
+)
+def test_s4_t03_rn06_disparos_por_tamano(
+    parametros: Parametros, tamano: Tamano, disparos: int
+) -> None:
+    """S4-T03 RN-06: en nivel 1, el pequeño cae con 1 disparo; el mediano, 2; el grande, 4."""
+    enemigos, bus, registro = _enemigos(parametros)
+    id = _aparecer(enemigos, bus, parametros, tamano)
+    _colocar(enemigos, id, (0.0, 500.0, 0.0))
+    for _ in range(disparos - 1):
+        _disparar(bus)
+    assert registro.de(EnemigoDestruido) == []
+    assert len(registro.de(EnemigoAlcanzado)) == disparos - 1
+    _disparar(bus)
+    assert [e.id for e in registro.de(EnemigoDestruido)] == [id]
     assert enemigos.activos == ()

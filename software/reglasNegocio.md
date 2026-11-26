@@ -177,7 +177,7 @@ Reglas del juego que el sistema debe respetar, independientes de la tecnología.
 ## Disparo del jugador
 
 ### RN-23. Disparo instantáneo
-- **Regla:** El disparo sale al soltar la barra espaciadora y no tiene tiempo de viaje: alcanza al instante el punto de impacto dentro de la mira (RN-37).
+- **Regla:** El disparo sale al soltar la barra espaciadora y no tiene tiempo de viaje: alcanza al instante el punto del centro de la mira (RN-37).
 - **Prioridad:** Alta
 - **Origen:** Decisión delegada por el usuario, para que el disparo sea lo más fluido posible
 - **Estado:** Confirmado
@@ -194,10 +194,10 @@ Reglas del juego que el sistema debe respetar, independientes de la tecnología.
 - **Origen:** Usuario
 - **Estado:** Eliminado. El fijado ya no existe.
 
-### RN-37. Dispersión del disparo
-- **Regla:** El disparo impacta en un punto al azar dentro de la mira. Cuanto más pequeña es la mira, más preciso es el disparo.
+### RN-37. Disparo al centro de la mira
+- **Regla:** El disparo va exactamente hacia el centro de la mira, sin dispersión al azar. Reducir la mira y el zoom (RN-38, RN-39) ayudan a apuntar con precisión, pero no cambian hacia dónde va el disparo.
 - **Prioridad:** Alta
-- **Origen:** Usuario; el impacto al azar dentro de la mira es decisión delegada
+- **Origen:** Usuario. Sustituye a la dispersión al azar dentro de la mira, que hacía fallar disparos con el enemigo justo en el centro.
 - **Estado:** Confirmado
 
 ### RN-38. Reducción de la mira
@@ -340,20 +340,20 @@ Valores de partida para implementar el juego y ajustarlo durante las pruebas. Ca
 | Velocidad de giro sin zoom | 90 °/s en cada eje | RN-40 |
 | Campo de visión sin zoom | 70° | RN-39 |
 | Campo de visión con zoom máximo | 25° | RN-39 |
-| Tamaño normal de la mira (radio de dispersión) | 3° | RN-37 |
+| Tamaño normal de la mira (radio del círculo) | 2,5° | RN-38 |
 | Tamaño mínimo de la mira | 0,5° | RN-38 |
-| Tiempo para llegar al tamaño mínimo | 1,5 s | RN-38 |
+| Tiempo para llegar al tamaño mínimo | 1 s | RN-38 |
 | Tiempo de vuelta de la mira y el zoom a su estado normal | 0,2 s | RN-38 |
 
 ### Enemigos por tamaño
 
 | Tamaño | Vida en nivel 1 | Velocidad máxima | Aceleración máxima | Radio de la zona de impacto |
 |---|---|---|---|---|
-| Pequeño | 10 | 110 u/s | 55 u/s² | 6 u |
-| Mediano | 20 | 70 u/s | 35 u/s² | 12 u |
-| Grande | 40 | 40 u/s | 20 u/s² | 24 u |
+| Pequeño | 10 | 110 u/s | 55 u/s² | 10 u |
+| Mediano | 20 | 70 u/s | 35 u/s² | 18 u |
+| Grande | 40 | 40 u/s | 20 u/s² | 32 u |
 
-Con estos radios, un enemigo grande se acierta casi siempre con un disparo rápido a media distancia. Un enemigo pequeño lejano exige reducir la mira.
+Con estos radios, un enemigo grande se acierta siempre con un disparo rápido bien centrado a media distancia, y un mediano, unas dos de cada tres veces. Un enemigo pequeño lejano exige reducir la mira.
 
 Con estas aceleraciones, cada enemigo tarda 2 s en pasar de parado a su velocidad máxima (RN-33). A velocidad máxima, su giro más cerrado tiene un radio de 220 u (pequeño), 140 u (mediano) y 80 u (grande). El enemigo empieza a frenar cuando la distancia a su destino es igual a la que necesita para detenerse con su aceleración máxima.
 

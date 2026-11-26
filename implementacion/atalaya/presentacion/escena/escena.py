@@ -1,9 +1,10 @@
 """Ventana y escena 3D (`modulos/escena.md`).
 
-Versión de S3: ventana a pantalla completa, cámara orientada según `vista`, fondo 1,
-enemigos con su destello de aviso, proyectiles, rayo del disparo, destello de impacto,
-explosión básica y daño recibido (temblor y tinte rojo). Los entornos y los cambios de
-fondo llegan en sprints posteriores.
+Versión de S4: ventana a pantalla completa, cámara orientada según `vista`, fondo 1,
+enemigos con el modelo y el color de su tipo y la escala de su tamaño, su destello de
+aviso, proyectiles, rayo del disparo, destello de impacto, explosión básica, daño
+recibido (temblor y tinte rojo) y temblor continuo por desestabilización. Los entornos y
+los cambios de fondo llegan en sprints posteriores.
 """
 
 import math
@@ -151,6 +152,7 @@ class Escena:
         # Panda3D usa la misma convención de ejes que la lógica (x derecha, y delante,
         # z arriba), así que el cuaternión se pasa tal cual.
         self._base.camera.set_quat(Quat(q.w, q.x, q.y, q.z))
+        self._temblar(v.desvio)
         self._ajustar_lente(v.campo_vision)
         # Los efectos nuevos aparecen en este mismo fotograma (RNF-05).
         self._procesar_eventos()
@@ -296,6 +298,18 @@ class Escena:
         for efecto in self._efectos:
             efecto.avanzar(math.inf)
         self._efectos.clear()
+
+    def _temblar(self, desvio: tuple[float, float]) -> None:
+        """Temblor continuo de la imagen por desestabilización (RN-12).
+
+        La cámara de la escena se gira justo el desvío de la mira de `vista`: la mira del
+        HUD, que sigue en el punto del ratón, queda sobre la escena desviada y señala
+        hacia donde va el disparo. Solo es visual; la orientación de `vista` no cambia.
+        """
+        derecha, arriba = desvio
+        if derecha or arriba:
+            # En Panda3D, el rumbo positivo gira a la izquierda y el cabeceo, hacia arriba.
+            self._base.camera.set_hpr(self._base.camera, -derecha, arriba, 0)
 
     def _ajustar_lente(self, vertical: float) -> None:
         """Campo de visión vertical en grados; el horizontal sale de la proporción."""

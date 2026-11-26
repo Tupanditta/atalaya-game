@@ -9,15 +9,15 @@
     "velocidad_giro": 90,
     "campo_vision_normal": 70,
     "campo_vision_zoom": 25,
-    "mira_normal": 3,
+    "mira_normal": 2.5,
     "mira_minima": 0.5,
-    "tiempo_apuntado": 1.5,
+    "tiempo_apuntado": 1,
     "tiempo_vuelta_mira": 0.2
   },
   "tamanos": {
-    "pequeno": {"vida": 10, "velocidad_maxima": 110, "aceleracion_maxima": 55, "radio_impacto": 6},
-    "mediano": {"vida": 20, "velocidad_maxima": 70, "aceleracion_maxima": 35, "radio_impacto": 12},
-    "grande": {"vida": 40, "velocidad_maxima": 40, "aceleracion_maxima": 20, "radio_impacto": 24}
+    "pequeno": {"vida": 10, "velocidad_maxima": 110, "aceleracion_maxima": 55, "radio_impacto": 10},
+    "mediano": {"vida": 20, "velocidad_maxima": 70, "aceleracion_maxima": 35, "radio_impacto": 18},
+    "grande": {"vida": 40, "velocidad_maxima": 40, "aceleracion_maxima": 20, "radio_impacto": 32}
   },
   "tipos": {
     "sin_efecto": {"dano": 3, "recarga": 4, "duracion_efecto": 0},

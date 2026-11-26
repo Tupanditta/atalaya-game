@@ -1,7 +1,8 @@
 """Enemigos activos: aparición, movimiento, ataques, proyectiles e impactos.
 
-Ver `modulos/enemigos.md`. Los efectos especiales de los tipos llegan en S4; aquí todos
-los tipos atacan igual, cada uno con su daño y su tiempo de recarga.
+Ver `modulos/enemigos.md`. Cada tamaño tiene su vida, su velocidad y su zona de impacto
+(RN-06), y cada tipo su tiempo de recarga (RN-14). El efecto de cada tipo sobre el
+jugador no se aplica aquí: lo aplica `estacion` al recibir ProyectilImpacta.
 """
 
 import math

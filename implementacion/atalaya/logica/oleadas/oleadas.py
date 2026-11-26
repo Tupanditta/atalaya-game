@@ -1,13 +1,14 @@
 """Oleadas: aparición, cronómetro y fin de cada oleada (`modulos/oleadas.md`).
 
-Versión de S3: aparición con su ritmo y el máximo de enemigos activos (RN-43),
+Versión de S4: composición completa de cada oleada, con tamaños y tipos mezclados
+(RN-06, RN-16), aparición con su ritmo y el máximo de enemigos activos (RN-43),
 cronómetro y fin de oleada (RN-15). Al superar una oleada empieza directamente la
-siguiente; el descanso llega en S5. Todos los enemigos son medianos y sin efecto
-especial; la mezcla de tipos y tamaños llega en S4.
+siguiente; el descanso llega en S5.
 """
 
 from dataclasses import dataclass
 
+from atalaya.logica.nucleo.azar import Azar
 from atalaya.logica.nucleo.bus import Bus
 from atalaya.logica.nucleo.dominio import Tamano, TipoEnemigo
 from atalaya.logica.nucleo.eventos import (
@@ -32,12 +33,42 @@ class EnemigoPendiente:
     vida: float
 
 
+def componer_oleada(
+    parametros: Parametros, numero: int, nivel: int, azar: Azar
+) -> list[EnemigoPendiente]:
+    """Enemigos de la oleada `numero` en el nivel `nivel`, en su orden de aparición.
+
+    - Cada enemigo tiene un tamaño al azar entre los tres (RN-06).
+    - Desde que se permiten tipos con efecto, la oleada lleva el máximo de enemigos con
+      efecto que admite (un tercio), cada uno de un tipo con efecto permitido al azar. Así
+      la dificultad nunca baja de una oleada a la siguiente (RN-16).
+    - El orden de aparición se baraja.
+    """
+    composicion = parametros.composicion_oleada(numero)
+    con_efecto = sorted(
+        (t for t in composicion.tipos_permitidos if t is not TipoEnemigo.SIN_EFECTO),
+        key=lambda t: t.value,
+    )
+    tipos = [TipoEnemigo.SIN_EFECTO] * composicion.numero_enemigos
+    if con_efecto:
+        for i in range(composicion.maximo_con_efecto):
+            tipos[i] = azar.elegir(con_efecto)
+    tamanos = list(Tamano)
+    pendientes = []
+    for tipo in tipos:
+        tamano = azar.elegir(tamanos)
+        pendientes.append(EnemigoPendiente(tipo, tamano, parametros.vida_enemigo(tamano, nivel)))
+    azar.barajar(pendientes)
+    return pendientes
+
+
 class Oleadas:
     """Decide qué enemigos aparecen y cuándo, y cuándo termina cada oleada."""
 
-    def __init__(self, bus: Bus, parametros: Parametros) -> None:
+    def __init__(self, bus: Bus, parametros: Parametros, azar: Azar) -> None:
         self._bus = bus
         self._parametros = parametros
+        self._azar = azar
         self._nivel = 1
         self._numero = 0
         self._en_curso = False
@@ -56,15 +87,10 @@ class Oleadas:
 
     def iniciar_oleada(self, numero: int) -> None:
         """Empieza la oleada `numero` con el nivel de la partida en curso."""
-        composicion = self._parametros.composicion_oleada(numero)
-        vida = self._parametros.vida_enemigo(Tamano.MEDIANO, self._nivel)
+        self._pendientes = componer_oleada(self._parametros, numero, self._nivel, self._azar)
         self._numero = numero
         self._en_curso = True
-        self._enemigos = composicion.numero_enemigos
-        self._pendientes = [
-            EnemigoPendiente(TipoEnemigo.SIN_EFECTO, Tamano.MEDIANO, vida)
-            for _ in range(composicion.numero_enemigos)
-        ]
+        self._enemigos = len(self._pendientes)
         self._activos = 0
         self._cronometro = 0.0
         self._cronometro_en_marcha = False

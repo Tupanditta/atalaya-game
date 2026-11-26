@@ -1,9 +1,9 @@
 """Efectos de sonido de la partida (`modulos/audio.md`).
 
-Versión mínima de S3, sin sonido posicional: disparo, aviso, impacto, explosión, falta
-de energía y alarma de daño. Los sonidos se generan al arrancar (`sintesis.py`) y se
-guardan en un disco virtual en memoria, así que no hay archivos de sonido en disco.
-El sonido posicional, la radio y la música llegan en sprints posteriores.
+Versión mínima, sin sonido posicional: disparo, aviso, impacto, explosión, falta de
+energía y alarma de daño (S3), y aturdimiento (S4). Los sonidos se generan al arrancar
+(`sintesis.py`) y se guardan en un disco virtual en memoria, así que no hay archivos de
+sonido en disco. El sonido posicional, la radio y la música llegan en sprints posteriores.
 """
 
 from collections.abc import Callable
@@ -14,6 +14,7 @@ from panda3d.core import AudioSound, Filename, VirtualFileMountRamdisk, VirtualF
 
 from atalaya.logica.nucleo.bus import Bus, Evento
 from atalaya.logica.nucleo.eventos import (
+    AturdimientoIniciado,
     AvisoDisparo,
     DisparoRealizado,
     DisparoSinEnergia,
@@ -38,6 +39,7 @@ _VOLUMEN = {
     "explosion": 0.8,
     "sin_energia": 0.6,
     "alarma": 0.55,
+    "aturdimiento": 0.7,
 }
 
 #: Copias de cada sonido que pueden sonar a la vez (varios enemigos avisan a la vez).
@@ -55,6 +57,7 @@ class Audio:
             "explosion": sintesis.explosion,
             "sin_energia": sintesis.sin_energia,
             "alarma": sintesis.alarma,
+            "aturdimiento": sintesis.aturdimiento,
         }
         vfs = VirtualFileSystem.get_global_ptr()
         if not vfs.is_directory(Filename(_CARPETA)):
@@ -78,6 +81,7 @@ class Audio:
             (EnemigoDestruido, "explosion"),
             (DisparoSinEnergia, "sin_energia"),
             (EstacionDanada, "alarma"),
+            (AturdimientoIniciado, "aturdimiento"),
         ]
         for tipo, nombre in reacciones:
             bus.suscribir(tipo, partial(self._al_evento, nombre))

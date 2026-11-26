@@ -1,14 +1,22 @@
 """Orientación de la cámara, giro, zoom y posición de la mira (`modulos/vista.md`).
 
-El desvío de la mira por desestabilización y el bloqueo por aturdimiento llegan en S4.
+Incluye el desvío de la mira por desestabilización (RN-12) y el bloqueo del giro por
+aturdimiento (RN-13).
 """
 
 import math
 
 from atalaya.logica.nucleo.bus import Bus
 from atalaya.logica.nucleo.dominio import Vector3
-from atalaya.logica.nucleo.eventos import ApuntadoCambiado, PartidaIniciada
-from atalaya.logica.nucleo.vectores import escalar, normalizar, sumar
+from atalaya.logica.nucleo.eventos import (
+    ApuntadoCambiado,
+    AturdimientoIniciado,
+    AturdimientoTerminado,
+    DesestabilizacionIniciada,
+    DesestabilizacionTerminada,
+    PartidaIniciada,
+)
+from atalaya.logica.nucleo.vectores import escalar, normalizar, producto_vectorial, sumar
 from atalaya.logica.parametros.modelo import Parametros
 from atalaya.logica.vista.cuaternion import Cuaternion
 
@@ -22,6 +30,14 @@ _VALORES_EJE = (-1, 0, 1)
 #: Límite horizontal de la mira, en medias alturas de pantalla: cubre pantallas de
 #: hasta 4:1. La presentación la limita antes al ancho real de la pantalla.
 _PUNTERO_HORIZONTAL_MAXIMO = 4.0
+
+#: Ruido del desvío por desestabilización: suma de dos senos por eje, con frecuencias en
+#: radianes por segundo que no son múltiplos entre sí, y sus pesos y fases. Con estos
+#: valores, el objetivo del desvío se mueve más despacio que la velocidad máxima del
+#: desvío, así que el temblor sigue el ruido sin saltos. Son detalles del temblor, no
+#: valores de juego de `reglasNegocio.md`.
+_RUIDO_HORIZONTAL = ((0.6, 7.3, 0.0), (0.4, 11.9, 1.1))
+_RUIDO_VERTICAL = ((0.6, 8.1, 0.4), (0.4, 13.7, 2.3))
 
 
 def eje_de_flechas(negativa: bool, positiva: bool) -> int:
@@ -45,7 +61,17 @@ class Vista:
         self._vertical = 0
         self._puntero = (0.0, 0.0)
         self._puntero_recibido = (0.0, 0.0)
+        self._aturdido = False
+        self._desestabilizado = False
+        self._desvio = (0.0, 0.0)
+        self._tiempo_ruido = 0.0
+        self._velocidad_desvio = parametros.ataques.velocidad_desvio
+        self._desvio_maximo = parametros.ataques.desvio_maximo
         bus.suscribir(ApuntadoCambiado, self._al_cambiar_apuntado)
+        bus.suscribir(AturdimientoIniciado, self._al_aturdir)
+        bus.suscribir(AturdimientoTerminado, self._al_terminar_aturdimiento)
+        bus.suscribir(DesestabilizacionIniciada, self._al_desestabilizar)
+        bus.suscribir(DesestabilizacionTerminada, self._al_terminar_desestabilizacion)
         bus.suscribir(PartidaIniciada, self._al_iniciar_partida)
 
     # --- operaciones -----------------------------------------------------------------
@@ -55,6 +81,7 @@ class Vista:
 
         Horizontal +1 gira a la derecha; vertical +1 gira hacia arriba. Se aplican en el
         siguiente `actualizar` y después se olvidan, para que el giro no quede atascado.
+        Mientras el jugador está aturdido, la vista no gira (RN-13).
         """
         if horizontal not in _VALORES_EJE or vertical not in _VALORES_EJE:
             raise ValueError(f"Ejes de giro no válidos: ({horizontal}, {vertical})")
@@ -74,8 +101,13 @@ class Vista:
         self._puntero_recibido = (max(-limite, min(limite, x)), max(-1.0, min(1.0, y)))
 
     def actualizar(self, dt: float) -> None:
-        """Ajusta el campo de visión al apuntado (RN-39) y gira la cámara (RN-40, RN-41)."""
+        """Ajusta el campo de visión al apuntado (RN-39), gira la cámara (RN-40, RN-41) y
+        mueve el desvío de la mira (RN-12)."""
         self._anterior = self._orientacion
+        self._mover_desvio(dt)
+        if self._aturdido:
+            self._horizontal = 0
+            self._vertical = 0
         self._puntero = self._puntero_recibido
         j = self._jugador
         self._campo_vision = (
@@ -136,21 +168,91 @@ class Vista:
         """Dirección real de la mira: la del punto de la pantalla donde está la mira.
 
         Con la perspectiva de la cámara, un punto a `y` medias alturas del centro está a
-        `y` × tan(campo de visión ÷ 2) sobre el eje «adelante». Hasta S4 no hay desvío.
+        `y` × tan(campo de visión ÷ 2) sobre el eje «adelante». Durante la
+        desestabilización, esa dirección se gira el desvío actual (RN-12).
         """
         x, y = self._puntero
         if x == 0 and y == 0:
-            return self.adelante
-        t = math.tan(math.radians(self._campo_vision) / 2)
-        lateral = sumar(escalar(self.derecha, x * t), escalar(self.arriba, y * t))
-        return normalizar(sumar(self.adelante, lateral))
+            base = self.adelante
+        else:
+            t = math.tan(math.radians(self._campo_vision) / 2)
+            lateral = sumar(escalar(self.derecha, x * t), escalar(self.arriba, y * t))
+            base = normalizar(sumar(self.adelante, lateral))
+        h, v = self._desvio
+        angulo = math.hypot(h, v)
+        if angulo == 0:
+            return base
+        # Un solo giro de `angulo` grados que lleva la base hacia el lado del desvío en la
+        # pantalla. El eje es perpendicular a la base, así que la dirección se separa de
+        # ella exactamente `angulo` grados.
+        lado = sumar(escalar(self.derecha, h), escalar(self.arriba, v))
+        eje = normalizar(producto_vectorial(base, lado))
+        return normalizar(Cuaternion.rotacion(eje, angulo).rotar(base))
+
+    @property
+    def desvio(self) -> tuple[float, float]:
+        """Desvío de la mira por desestabilización, en grados: (a la derecha, hacia arriba).
+
+        Su módulo nunca supera el desvío máximo; vale (0, 0) sin desestabilización.
+        """
+        return self._desvio
+
+    @property
+    def aturdido(self) -> bool:
+        """Indica si el giro está bloqueado por aturdimiento (RN-13)."""
+        return self._aturdido
+
+    # --- internos --------------------------------------------------------------------
+
+    def _mover_desvio(self, dt: float) -> None:
+        """Lleva el desvío hacia el ruido, o hacia 0 sin desestabilización (RN-12).
+
+        El desvío nunca cambia más de la velocidad máxima × `dt` en un paso, así que tanto
+        al empezar como al terminar la desestabilización se mueve sin saltos.
+        """
+        self._tiempo_ruido += dt
+        objetivo = self._ruido() if self._desestabilizado else (0.0, 0.0)
+        dh, dv = objetivo[0] - self._desvio[0], objetivo[1] - self._desvio[1]
+        distancia = math.hypot(dh, dv)
+        paso = self._velocidad_desvio * dt
+        if distancia <= paso:
+            self._desvio = objetivo
+        else:
+            k = paso / distancia
+            self._desvio = (self._desvio[0] + dh * k, self._desvio[1] + dv * k)
+
+    def _ruido(self) -> tuple[float, float]:
+        """Punto del ruido suave en este instante, dentro del círculo del desvío máximo."""
+        t = self._tiempo_ruido
+        h = sum(peso * math.sin(w * t + fase) for peso, w, fase in _RUIDO_HORIZONTAL)
+        v = sum(peso * math.sin(w * t + fase) for peso, w, fase in _RUIDO_VERTICAL)
+        h, v = h * self._desvio_maximo, v * self._desvio_maximo
+        modulo = math.hypot(h, v)
+        if modulo > self._desvio_maximo:
+            h, v = h * self._desvio_maximo / modulo, v * self._desvio_maximo / modulo
+        return h, v
 
     # --- eventos ---------------------------------------------------------------------
 
     def _al_cambiar_apuntado(self, evento: ApuntadoCambiado) -> None:
         self._progreso_apuntado = min(1.0, max(0.0, evento.progreso))
 
+    def _al_aturdir(self, evento: AturdimientoIniciado) -> None:
+        self._aturdido = True
+
+    def _al_terminar_aturdimiento(self, evento: AturdimientoTerminado) -> None:
+        self._aturdido = False
+
+    def _al_desestabilizar(self, evento: DesestabilizacionIniciada) -> None:
+        self._desestabilizado = True
+
+    def _al_terminar_desestabilizacion(self, evento: DesestabilizacionTerminada) -> None:
+        self._desestabilizado = False
+
     def _al_iniciar_partida(self, evento: PartidaIniciada) -> None:
+        self._aturdido = False
+        self._desestabilizado = False
+        self._desvio = (0.0, 0.0)
         self._orientacion = Cuaternion.identidad()
         self._anterior = self._orientacion
         self._progreso_apuntado = 0.0

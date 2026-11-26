@@ -1,12 +1,11 @@
 """Pruebas del módulo armamento (Sprint 2)."""
 
-import math
 from typing import TypeVar
 
 import pytest
 
-from atalaya.logica.armamento import Armamento, direccion_disparo
-from atalaya.logica.nucleo import PASO, Azar, Bus, Etapa, Evento, Nucleo
+from atalaya.logica.armamento import Armamento
+from atalaya.logica.nucleo import PASO, Bus, Etapa, Evento, Nucleo
 from atalaya.logica.nucleo.dominio import Vector3
 from atalaya.logica.nucleo.eventos import (
     ApuntadoCambiado,
@@ -15,7 +14,6 @@ from atalaya.logica.nucleo.eventos import (
     EnergiaCambiada,
     PartidaIniciada,
 )
-from atalaya.logica.nucleo.vectores import angulo_entre
 from atalaya.logica.parametros import Parametros
 from atalaya.logica.vista import Vista
 
@@ -47,7 +45,7 @@ class Registro:
 def _armamento(parametros: Parametros, semilla: int = 1) -> tuple[Armamento, Bus, Registro]:
     bus = Bus()
     registro = Registro(bus, ApuntadoCambiado, DisparoRealizado, DisparoSinEnergia, EnergiaCambiada)
-    armamento = Armamento(bus, parametros, MiraFija(), Azar(semilla))
+    armamento = Armamento(bus, parametros, MiraFija())
     bus.publicar(PartidaIniciada(nivel=1))
     bus.entregar()
     registro.limpiar()
@@ -80,7 +78,7 @@ def test_s2_t01_rn02_energia_al_maximo(parametros: Parametros) -> None:
     """S2-T01 RN-02: al iniciar la partida, la energía está al máximo."""
     bus = Bus()
     registro = Registro(bus, EnergiaCambiada)
-    armamento = Armamento(bus, parametros, MiraFija(), Azar(1))
+    armamento = Armamento(bus, parametros, MiraFija())
     _disparar(armamento, bus)
     bus.publicar(PartidaIniciada(nivel=1))
     bus.entregar()
@@ -151,15 +149,19 @@ def test_s2_t05_rn04_recarga_apuntando(parametros: Parametros) -> None:
 
 
 @pytest.mark.parametrize(
-    ("segundos", "progreso"), [(0.75, 0.5), (1.5, 1.0), (3.0, 1.0)], ids=["0,75s", "1,5s", "3s"]
+    ("fraccion", "progreso"), [(0.5, 0.5), (1.0, 1.0), (2.0, 1.0)], ids=["mitad", "justo", "doble"]
 )
 def test_s2_t06_rn38_rf32_reduccion_de_la_mira(
-    parametros: Parametros, segundos: float, progreso: float
+    parametros: Parametros, fraccion: float, progreso: float
 ) -> None:
-    """S2-T06 RN-38 RF-32: la mira se reduce de forma continua hasta su tamaño mínimo."""
+    """S2-T06 RN-38 RF-32: la mira se reduce de forma continua hasta su tamaño mínimo.
+
+    Se mantiene la barra la mitad, el total y el doble del tiempo de apuntado.
+    """
     armamento, bus, registro = _armamento(parametros)
     j = parametros.jugador
-    assert armamento.radio_mira == j.mira_normal == 3
+    segundos = j.tiempo_apuntado * fraccion
+    assert armamento.radio_mira == j.mira_normal
     radios = []
     for _ in range(_pasos(segundos)):
         _paso(armamento, bus, True)
@@ -169,7 +171,7 @@ def test_s2_t06_rn38_rf32_reduccion_de_la_mira(
     assert all(r >= j.mira_minima for r in radios)
     assert radios == sorted(radios, reverse=True)
     if progreso == 1:
-        assert armamento.radio_mira == j.mira_minima == 0.5
+        assert armamento.radio_mira == j.mira_minima
 
 
 def test_s2_t07_rn38_vuelta_de_la_mira(parametros: Parametros) -> None:
@@ -185,11 +187,11 @@ def test_s2_t07_rn38_vuelta_de_la_mira(parametros: Parametros) -> None:
 
 
 def test_s2_t08_rn39_zoom_con_vista(parametros: Parametros) -> None:
-    """S2-T08 RN-39: con vista conectada, apuntar 1,5 s lleva el campo de visión a 25°."""
+    """S2-T08 RN-39: con vista conectada, apuntar el tiempo de apuntado lleva el zoom a 25°."""
     nucleo = Nucleo(semilla=1)
     registro = Registro(nucleo.bus, ApuntadoCambiado)
     vista = Vista(nucleo.bus, parametros)
-    armamento = Armamento(nucleo.bus, parametros, vista, nucleo.azar)
+    armamento = Armamento(nucleo.bus, parametros, vista)
     nucleo.registrar(Etapa.VISTA, vista)
     nucleo.registrar(Etapa.ARMAMENTO, armamento)
     # `vista` se actualiza antes que `armamento`: aplica el apuntado en el paso siguiente.
@@ -200,48 +202,29 @@ def test_s2_t08_rn39_zoom_con_vista(parametros: Parametros) -> None:
     assert vista.campo_vision == parametros.jugador.campo_vision_zoom == 25
 
 
-def _angulos(parametros: Parametros, radio: float, n: int) -> list[float]:
-    azar = Azar(2024)
-    centro: Vector3 = (0.0, 1.0, 0.0)
-    return [angulo_entre(centro, direccion_disparo(centro, radio, azar)) for _ in range(n)]
+@pytest.mark.parametrize("apuntado", [0.0, 0.5, 1.0], ids=["rapido", "medio", "completo"])
+def test_s2_t09_s2_t10_rn37_disparo_al_centro_de_la_mira(
+    parametros: Parametros, apuntado: float
+) -> None:
+    """S2-T09 S2-T10 RN-37: el disparo va justo hacia el centro de la mira, sin dispersión.
 
-
-def test_s2_t09_rn37_dispersion_mira_normal(parametros: Parametros) -> None:
-    """S2-T09 RN-37: el impacto es uniforme dentro del círculo de la mira normal."""
-    radio = parametros.jugador.mira_normal
-    angulos = _angulos(parametros, radio, 10_000)
-    assert max(angulos) <= radio + 1e-9
-    # En un círculo uniforme, el radio medio es 2/3 del radio y la mitad del radio
-    # encierra un cuarto de los puntos.
-    assert sum(angulos) / len(angulos) == pytest.approx(2 * radio / 3, abs=0.05)
-    dentro = sum(1 for a in angulos if a <= radio / 2) / len(angulos)
-    assert dentro == pytest.approx(0.25, abs=0.015)
-
-
-def test_s2_t10_rn37_dispersion_mira_minima(parametros: Parametros) -> None:
-    """S2-T10 RN-37: con la mira mínima, todos los disparos caen dentro de 0,5°."""
-    radio = parametros.jugador.mira_minima
-    assert max(_angulos(parametros, radio, 10_000)) <= radio + 1e-9
-
-
-def test_rn37_disparo_usa_la_mira_al_soltar(parametros: Parametros) -> None:
-    """RN-37: el disparo usa el tamaño de mira del momento de soltar, alrededor de la mira."""
+    Da igual cuánto se haya reducido la mira al soltar: 100 disparos van en la dirección
+    de la mira de `vista`.
+    """
     bus = Bus()
     registro = Registro(bus, DisparoRealizado)
-    direccion: Vector3 = (1.0, 0.0, 0.0)
-    armamento = Armamento(bus, parametros, MiraFija(direccion), Azar(7))
-    for _ in range(200):
-        _mantener(armamento, bus, True, _pasos(parametros.jugador.tiempo_apuntado))
+    direccion: Vector3 = (0.6, 0.8, 0.0)
+    armamento = Armamento(bus, parametros, MiraFija(direccion))
+    tiempo = parametros.jugador.tiempo_apuntado
+    for _ in range(100):
+        _mantener(armamento, bus, True, max(1, _pasos(tiempo * apuntado)))
         _paso(armamento, bus, False)
-        _mantener(armamento, bus, False, _pasos(parametros.jugador.tiempo_apuntado))
+        # Tiempo de sobra para recargar la energía de un disparo.
+        _mantener(armamento, bus, False, _pasos(2.0))
     disparos = registro.de(DisparoRealizado)
-    assert len(disparos) == 200
+    assert len(disparos) == 100
     assert all(d.origen == (0.0, 0.0, 0.0) for d in disparos)
-    assert all(
-        angulo_entre(direccion, d.direccion) <= parametros.jugador.mira_minima + 1e-9
-        for d in disparos
-    )
-    assert all(math.isclose(sum(c * c for c in d.direccion), 1.0) for d in disparos)
+    assert all(d.direccion == direccion for d in disparos)
 
 
 def test_s2_t11_rn23_rnf05_disparo_en_el_paso_del_suelte(parametros: Parametros) -> None:
@@ -250,7 +233,7 @@ def test_s2_t11_rn23_rnf05_disparo_en_el_paso_del_suelte(parametros: Parametros)
     pasos_disparo: list[int] = []
     paso_actual = [0]
     nucleo.bus.suscribir(DisparoRealizado, lambda _: pasos_disparo.append(paso_actual[0]))
-    armamento = Armamento(nucleo.bus, parametros, MiraFija(), nucleo.azar)
+    armamento = Armamento(nucleo.bus, parametros, MiraFija())
     nucleo.registrar(Etapa.ARMAMENTO, armamento)
     for paso in range(1, 21):
         paso_actual[0] = paso

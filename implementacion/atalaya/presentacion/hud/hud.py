@@ -1,14 +1,19 @@
 """HUD de la partida (`modulos/hud.md`, `interfaz/interfaz.md`, sección 6).
 
-Versión de S3: la mira, que sigue al ratón, el radar, las barras de integridad y
-energía, el nivel, el panel de oleada y el resumen mínimo de derrota. Las transmisiones,
-los avisos de aturdimiento y los menús llegan en sprints posteriores.
+Versión de S4: la mira, que sigue al ratón, el radar con el símbolo y el color de cada
+tipo y tamaño, las barras de integridad y energía, el nivel, el panel de oleada, el
+aviso de aturdimiento y el resumen mínimo de derrota. Las transmisiones y los menús
+llegan en sprints posteriores.
+
+La mira desviada por desestabilización (RN-12) no se desplaza en la pantalla: `escena`
+gira la imagen con el desvío de `vista`, así que la mira queda desviada respecto a la
+escena justo hacia donde va el disparo.
 """
 
 import math
 
 from direct.showbase.ShowBase import ShowBase
-from panda3d.core import NodePath, TextNode
+from panda3d.core import CardMaker, NodePath, TextNode, TransparencyAttrib
 
 from atalaya.logica.armamento import Armamento
 from atalaya.logica.estacion import Estacion
@@ -20,6 +25,7 @@ from atalaya.logica.oleadas import Oleadas
 from atalaya.logica.parametros import Parametros
 from atalaya.logica.radar import Altura, Contacto, Radar
 from atalaya.logica.vista import Vista
+from atalaya.presentacion.escena.efectos import textura_vineta
 from atalaya.presentacion.hud.dibujo import (
     Color,
     Punto,
@@ -98,6 +104,17 @@ _SEPARACION_MARCAS = 10
 _LARGO_MARCAS = 10
 _RADIO_PUNTO = 3
 _OPACIDAD_MIRA = 0.9
+#: Mira bloqueada por aturdimiento: trazo discontinuo y opacidad al 40 %.
+_OPACIDAD_MIRA_ATURDIDA = 0.4
+_TRAZO_DISCONTINUO = 8
+_HUECO_DISCONTINUO = 6
+
+#: Cartel de aturdimiento bajo el panel de oleada (`interfaz/05-aturdido.svg`).
+_CARTEL_X, _CARTEL_Y, _CARTEL_ANCHO, _CARTEL_ALTO = 700, 128, 520, 56
+#: Opacidad de la viñeta de aturdimiento en los bordes de la pantalla.
+_OPACIDAD_VINETA_ATURDIDO = 0.3
+#: Orden de dibujo de la viñeta: debajo del HUD, encima de la escena.
+_ORDEN_VINETA = -5
 
 
 def radio_mira_en_pantalla(radio: float, campo_vision: float) -> float:
@@ -132,6 +149,36 @@ def forma_contacto(tipo: TipoEnemigo, centro: Punto, lado: float) -> list[Punto]
     if tipo is TipoEnemigo.ATURDIDOR:
         return [(x, y - m), (x + m, y), (x, y + m), (x - m, y)]
     return circulo(centro, m, 20)[:-1]
+
+
+def texto_aturdimiento(restante: float) -> str:
+    """Texto del cartel de aturdimiento con la cuenta atrás en décimas, con coma decimal.
+
+    Se redondea hacia arriba: mientras dura el aturdimiento nunca muestra «0,0 s».
+    """
+    decimas = max(1, math.ceil(restante * 10 - 1e-9))
+    return f"SISTEMAS ATURDIDOS · {decimas // 10},{decimas % 10} s"
+
+
+def circulo_discontinuo(centro: Punto, radio: float) -> list[list[Punto]]:
+    """Trazos de una circunferencia discontinua: 8 px de trazo y 6 px de hueco."""
+    periodo = _TRAZO_DISCONTINUO + _HUECO_DISCONTINUO
+    trazos = max(1, round(2 * math.pi * radio / periodo))
+    fraccion = _TRAZO_DISCONTINUO / periodo
+    cx, cy = centro
+    resultado = []
+    for k in range(trazos):
+        inicio = 2 * math.pi * k / trazos
+        fin = inicio + 2 * math.pi * fraccion / trazos
+        puntos = [
+            (
+                cx + radio * math.cos(inicio + (fin - inicio) * i / 4),
+                cy + radio * math.sin(inicio + (fin - inicio) * i / 4),
+            )
+            for i in range(5)
+        ]
+        resultado.append(puntos)
+    return resultado
 
 
 class _Barra:
@@ -201,7 +248,9 @@ class Hud:
         self._derecha = self._raiz.attach_new_node("derecha")
         self._tiempo = 0.0
         self._mira: NodePath | None = None
-        self._clave_mira: tuple[float, Color] | None = None
+        self._clave_mira: tuple[float, Color, bool] | None = None
+        self._cartel: NodePath | None = None
+        self._vineta = self._crear_vineta()
         self._sector: NodePath | None = None
         self._clave_sector: float | None = None
         self._contactos: NodePath | None = None
@@ -220,10 +269,12 @@ class Hud:
         self._tiempo += dt
         self._desde_sin_energia += dt
         derrota = self._flujo.pantalla is Pantalla.RESUMEN
-        self._dibujar_mira(visible=not derrota)
+        aturdido = self._estacion.aturdido and not derrota
+        self._dibujar_mira(visible=not derrota, aturdida=aturdido)
         self._dibujar_radar()
         self._dibujar_estado(dt)
         self._dibujar_oleada()
+        self._dibujar_aturdimiento(aturdido)
         self._dibujar_resumen(derrota)
 
     # --- escala y anclajes -----------------------------------------------------------
@@ -263,6 +314,12 @@ class Hud:
             rectangulo(derecha, _BARRA_X, y, _BARRA_ANCHO, _BARRA_ALTO, PISTA)
         panel(centro, _OLEADA_X, _OLEADA_Y, _OLEADA_ANCHO, _OLEADA_ALTO, e)
         self._crear_fondo_radar(izquierda)
+        self._cartel = centro.attach_new_node("cartel-aturdimiento")
+        atenuado = color("#0A1220", 0.85)
+        aturdidor = COLOR_TIPO[TipoEnemigo.ATURDIDOR]
+        x, y, ancho, alto = _CARTEL_X, _CARTEL_Y, _CARTEL_ANCHO, _CARTEL_ALTO
+        panel(self._cartel, x, y, ancho, alto, e, relleno=atenuado, borde=aturdidor)
+        self._cartel.hide()
         f, a_derecha, a_centro = self._fuente, TextNode.A_right, TextNode.A_center
         fin_barra = _BARRA_X + _BARRA_ANCHO
         mitad_barra = _BARRA_X + _BARRA_ANCHO / 2
@@ -277,6 +334,7 @@ class Hud:
             "oleada": Texto(centro, f, ANCHO_DISENO / 2, 72, 30, a_centro),
             "restantes": Texto(centro, f, ANCHO_DISENO / 2, 98, 16, a_centro),
             "radar": Texto(izquierda, f, 60, 702, 16),
+            "aturdimiento": Texto(self._cartel, f, ANCHO_DISENO / 2, 164, 24, a_centro),
         }
         cx, cy = _RADAR_CENTRO
         alcance = self._parametros.ataques.alcance_radar
@@ -303,26 +361,39 @@ class Hud:
 
     # --- mira ------------------------------------------------------------------------
 
-    def _dibujar_mira(self, visible: bool) -> None:
+    def _dibujar_mira(self, visible: bool, aturdida: bool) -> None:
         j = self._jugador
         progreso = self._armamento.progreso_apuntado
         campo = j.campo_vision_normal + (j.campo_vision_zoom - j.campo_vision_normal) * progreso
         radio = radio_mira_en_pantalla(self._armamento.radio_mira, campo)
         tono = mezclar(TEXTO, ACENTO, progreso)
-        clave = (round(radio, 2), tono)
+        clave = (round(radio, 2), tono, aturdida)
         if clave != self._clave_mira or self._mira is None:
             self._clave_mira = clave
             if self._mira is not None:
                 self._mira.remove_node()
             self._mira = capa(self._centro, "mira", _ORDEN_MIRA)
-            trazo = (*tono[:3], _OPACIDAD_MIRA)
             cx, cy = ANCHO_DISENO / 2, ALTO_DISENO / 2
-            linea(self._mira, circulo((cx, cy), radio), trazo, _GROSOR_MIRA, self._escala)
-            dentro, fuera = radio + _SEPARACION_MARCAS, radio + _SEPARACION_MARCAS + _LARGO_MARCAS
-            for dx, dy in ((0, -1), (0, 1), (-1, 0), (1, 0)):
-                marca = [(cx + dx * dentro, cy + dy * dentro), (cx + dx * fuera, cy + dy * fuera)]
-                linea(self._mira, marca, trazo, _GROSOR_MIRA, self._escala)
-            poligono(self._mira, circulo((cx, cy), _RADIO_PUNTO, 16)[:-1], tono)
+            e = self._escala
+            if aturdida:
+                # Mira bloqueada (`interfaz/05-aturdido.svg`): círculo discontinuo y punto,
+                # sin marcas exteriores, todo al 40 %.
+                trazo = (*tono[:3], _OPACIDAD_MIRA_ATURDIDA)
+                for trazo_circulo in circulo_discontinuo((cx, cy), radio):
+                    linea(self._mira, trazo_circulo, trazo, _GROSOR_MIRA, e)
+                poligono(self._mira, circulo((cx, cy), _RADIO_PUNTO, 16)[:-1], trazo)
+            else:
+                trazo = (*tono[:3], _OPACIDAD_MIRA)
+                linea(self._mira, circulo((cx, cy), radio), trazo, _GROSOR_MIRA, e)
+                dentro = radio + _SEPARACION_MARCAS
+                fuera = dentro + _LARGO_MARCAS
+                for dx, dy in ((0, -1), (0, 1), (-1, 0), (1, 0)):
+                    marca = [
+                        (cx + dx * dentro, cy + dy * dentro),
+                        (cx + dx * fuera, cy + dy * fuera),
+                    ]
+                    linea(self._mira, marca, trazo, _GROSOR_MIRA, e)
+                poligono(self._mira, circulo((cx, cy), _RADIO_PUNTO, 16)[:-1], tono)
         # La mira está donde la ha puesto el ratón: `puntero` va en medias alturas desde el
         # centro, con la y hacia arriba, y el HUD dibuja con la y de diseño hacia abajo.
         x, y = self._vista.puntero
@@ -427,6 +498,35 @@ class Hud:
         restantes = self._oleadas.restantes
         texto = "1 ENEMIGO RESTANTE" if restantes == 1 else f"{restantes} ENEMIGOS RESTANTES"
         self._textos["restantes"].mostrar(texto, TEXTO_SECUNDARIO)
+
+    # --- aturdimiento -----------------------------------------------------------------
+
+    def _crear_vineta(self) -> NodePath:
+        """Viñeta del color del aturdidor en los bordes, a pantalla completa (RF-15)."""
+        tarjeta = CardMaker("vineta-aturdimiento")
+        tarjeta.set_frame(-1, 1, -1, 1)
+        vineta = self._base.render2d.attach_new_node(tarjeta.generate())
+        vineta.set_texture(textura_vineta())
+        vineta.set_color(*COLOR_TIPO[TipoEnemigo.ATURDIDOR][:3], _OPACIDAD_VINETA_ATURDIDO)
+        vineta.set_transparency(TransparencyAttrib.M_alpha)
+        vineta.set_depth_test(False)
+        vineta.set_depth_write(False)
+        vineta.set_bin("fixed", _ORDEN_VINETA)
+        vineta.hide()
+        return vineta
+
+    def _dibujar_aturdimiento(self, aturdido: bool) -> None:
+        """Cartel con la cuenta atrás y viñeta mientras dura el aturdimiento (RF-15)."""
+        if self._cartel is None:
+            return
+        if not aturdido:
+            self._cartel.hide()
+            self._vineta.hide()
+            return
+        self._cartel.show()
+        self._vineta.show()
+        texto = texto_aturdimiento(self._estacion.tiempo_aturdimiento)
+        self._textos["aturdimiento"].mostrar(texto, COLOR_TIPO[TipoEnemigo.ATURDIDOR])
 
     # --- resumen de derrota ----------------------------------------------------------
 
