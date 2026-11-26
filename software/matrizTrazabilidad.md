@@ -2,7 +2,7 @@
 
 Relación entre requisitos, reglas de negocio y restricciones con los casos de uso. Se genera a partir del campo «Requisitos relacionados» de cada especificación de caso de uso.
 
-No aparecen los elementos eliminados: CU-03, RF-04, RF-29, RF-30, RN-08, RN-27, RN-28.
+No aparecen los elementos eliminados: CU-03, RF-04, RF-28, RF-29, RF-30, RN-08, RN-27, RN-28.
 
 | Elemento | CU-01 | CU-02 | CU-04 | CU-05 | CU-06 | CU-07 | CU-08 | CU-09 | CU-10 | CU-11 | CU-12 |
 |---|---|---|---|---|---|---|---|---|---|---|---|
@@ -32,7 +32,6 @@ No aparecen los elementos eliminados: CU-03, RF-04, RF-29, RF-30, RN-08, RN-27, 
 | RF-25 |  |  |  |  |  |  | X |  |  |  |  |
 | RF-26 |  |  |  |  |  | X | X |  |  |  |  |
 | RF-27 | X |  |  |  |  |  |  |  |  |  |  |
-| RF-28 |  | X | X |  |  |  |  |  |  |  |  |
 | RF-31 |  |  |  | X |  |  |  |  |  |  |  |
 | RF-32 |  |  | X |  |  |  |  |  |  |  |  |
 | RF-33 |  | X | X |  |  |  |  |  |  |  |  |
@@ -48,6 +47,7 @@ No aparecen los elementos eliminados: CU-03, RF-04, RF-29, RF-30, RN-08, RN-27, 
 | RF-43 |  |  |  |  |  | X |  |  |  | X |  |
 | RF-44 |  |  |  |  |  |  |  |  |  | X |  |
 | RF-45 |  |  |  | X |  | X |  |  |  |  |  |
+| RF-46 |  | X | X |  |  |  |  |  |  |  |  |
 | RNF-01 |  | X | X |  | X |  |  |  |  |  |  |
 | RNF-02 |  | X | X |  |  |  |  |  |  |  |  |
 | RNF-03 | X | X | X |  |  |  |  | X | X | X | X |

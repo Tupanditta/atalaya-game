@@ -1,4 +1,8 @@
-"""Módulo audio: Efectos, sonido posicional, radio y música.
+"""Módulo audio: efectos, sonido posicional, radio y música.
 
-Se implementa en un sprint posterior (`software/sprints.md`).
+Ver `software/modulos/audio.md`.
 """
+
+from atalaya.presentacion.audio.audio import Audio
+
+__all__ = ["Audio"]

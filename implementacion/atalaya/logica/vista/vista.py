@@ -1,11 +1,14 @@
-"""Orientación de la cámara, giro y zoom (`modulos/vista.md`).
+"""Orientación de la cámara, giro, zoom y posición de la mira (`modulos/vista.md`).
 
 El desvío de la mira por desestabilización y el bloqueo por aturdimiento llegan en S4.
 """
 
+import math
+
 from atalaya.logica.nucleo.bus import Bus
 from atalaya.logica.nucleo.dominio import Vector3
 from atalaya.logica.nucleo.eventos import ApuntadoCambiado, PartidaIniciada
+from atalaya.logica.nucleo.vectores import escalar, normalizar, sumar
 from atalaya.logica.parametros.modelo import Parametros
 from atalaya.logica.vista.cuaternion import Cuaternion
 
@@ -15,6 +18,10 @@ ADELANTE: Vector3 = (0.0, 1.0, 0.0)
 ARRIBA: Vector3 = (0.0, 0.0, 1.0)
 
 _VALORES_EJE = (-1, 0, 1)
+
+#: Límite horizontal de la mira, en medias alturas de pantalla: cubre pantallas de
+#: hasta 4:1. La presentación la limita antes al ancho real de la pantalla.
+_PUNTERO_HORIZONTAL_MAXIMO = 4.0
 
 
 def eje_de_flechas(negativa: bool, positiva: bool) -> int:
@@ -36,6 +43,8 @@ class Vista:
         self._campo_vision = self._jugador.campo_vision_normal
         self._horizontal = 0
         self._vertical = 0
+        self._puntero = (0.0, 0.0)
+        self._puntero_recibido = (0.0, 0.0)
         bus.suscribir(ApuntadoCambiado, self._al_cambiar_apuntado)
         bus.suscribir(PartidaIniciada, self._al_iniciar_partida)
 
@@ -52,9 +61,22 @@ class Vista:
         self._horizontal = horizontal
         self._vertical = vertical
 
+    def recibir_puntero(self, x: float, y: float) -> None:
+        """Posición de la mira en la pantalla, que el jugador mueve con el ratón.
+
+        Se mide desde el centro de la pantalla en medias alturas de pantalla: `y` va de
+        −1 (borde inferior) a +1 (borde superior) y `x` es positiva hacia la derecha.
+        Se aplica en el siguiente `actualizar`, así que en pausa la mira no se mueve.
+        """
+        if not (math.isfinite(x) and math.isfinite(y)):
+            raise ValueError(f"Posición de la mira no válida: ({x}, {y})")
+        limite = _PUNTERO_HORIZONTAL_MAXIMO
+        self._puntero_recibido = (max(-limite, min(limite, x)), max(-1.0, min(1.0, y)))
+
     def actualizar(self, dt: float) -> None:
         """Ajusta el campo de visión al apuntado (RN-39) y gira la cámara (RN-40, RN-41)."""
         self._anterior = self._orientacion
+        self._puntero = self._puntero_recibido
         j = self._jugador
         self._campo_vision = (
             j.campo_vision_normal
@@ -105,9 +127,23 @@ class Vista:
         return self._orientacion.rotar(DERECHA)
 
     @property
+    def puntero(self) -> tuple[float, float]:
+        """Posición de la mira en la pantalla, en medias alturas desde el centro."""
+        return self._puntero
+
+    @property
     def direccion_mira(self) -> Vector3:
-        """Dirección real de la mira. Hasta S4 no hay desvío: es el centro de la vista."""
-        return self.adelante
+        """Dirección real de la mira: la del punto de la pantalla donde está la mira.
+
+        Con la perspectiva de la cámara, un punto a `y` medias alturas del centro está a
+        `y` × tan(campo de visión ÷ 2) sobre el eje «adelante». Hasta S4 no hay desvío.
+        """
+        x, y = self._puntero
+        if x == 0 and y == 0:
+            return self.adelante
+        t = math.tan(math.radians(self._campo_vision) / 2)
+        lateral = sumar(escalar(self.derecha, x * t), escalar(self.arriba, y * t))
+        return normalizar(sumar(self.adelante, lateral))
 
     # --- eventos ---------------------------------------------------------------------
 
@@ -121,3 +157,5 @@ class Vista:
         self._campo_vision = self._jugador.campo_vision_normal
         self._horizontal = 0
         self._vertical = 0
+        self._puntero = (0.0, 0.0)
+        self._puntero_recibido = (0.0, 0.0)

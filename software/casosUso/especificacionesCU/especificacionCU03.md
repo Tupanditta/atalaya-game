@@ -2,4 +2,4 @@
 
 **Estado:** Eliminado.
 
-La mira ya no se mueve por separado: está fija en el centro de la pantalla (RF-28) y el jugador apunta girando la vista. Ese comportamiento está en CU-02. El identificador CU-03 no se reutiliza.
+Apuntar está integrado en CU-02: el jugador gira la vista con las flechas y mueve la mira con el ratón (RF-46). El identificador CU-03 no se reutiliza.

@@ -11,7 +11,7 @@
 |---|---|---|---|
 | CU-01 | Iniciar partida | ACT-01 | Que el jugador empiece una partida nueva |
 | CU-02 | Girar la vista | ACT-01 | Que el jugador oriente la vista y la mira hacia la dirección que quiere vigilar o el objetivo al que quiere disparar |
-| CU-03 | Apuntar (eliminado) | — | Integrado en CU-02: la mira está fija en el centro y se apunta girando la vista |
+| CU-03 | Apuntar (eliminado) | — | Integrado en CU-02: se apunta girando la vista y moviendo la mira con el ratón |
 | CU-04 | Disparar | ACT-01 | Que el jugador dañe o destruya a un enemigo |
 | CU-05 | Localizar enemigos | ACT-01 | Que el jugador sepa dónde están los enemigos, incluidos los que están fuera de la vista |
 | CU-06 | Atacar la estación | ACT-02, ACT-01 | Que un enemigo dañe la estación o dificulte el control del jugador |

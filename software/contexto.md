@@ -23,9 +23,9 @@ La historia se cuenta de forma ligera: mensajes de radio, transmisiones entre ol
 ## Mecánica principal
 
 - **Posición fija.** El jugador no se desplaza por el escenario. Solo rota sobre su eje.
-- **Girar la vista.** Las flechas del teclado giran la vista del jugador.
-- **Apuntar.** La mira está fija en el centro de la pantalla. Para apuntar, el jugador gira la vista con las flechas.
-- **Disparar.** Una tecla dispara hacia la mira. El juego se controla solo con el teclado.
+- **Girar la vista.** Las flechas del teclado, o las teclas W, A, S y D, giran la vista del jugador.
+- **Apuntar.** El jugador mueve la mira por la pantalla con el ratón y gira la vista con las flechas para buscar enemigos fuera de ella.
+- **Disparar.** La barra espaciadora o el botón izquierdo del ratón disparan hacia la mira. Salvo la mira y el disparo, el juego se controla con el teclado.
 - **Apuntar con precisión.** Mantener pulsada la tecla de disparo reduce la mira hasta un tamaño mínimo y acerca la imagen para ver más lejos. Cuanto más pequeña es la mira, más preciso es el disparo. El disparo sale al soltar la tecla.
 - **Energía limitada.** Cada disparo consume energía. La energía se recarga sola con el tiempo. Si la barra está vacía, el jugador no puede disparar hasta que se recargue.
 

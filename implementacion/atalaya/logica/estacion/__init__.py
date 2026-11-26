@@ -1,4 +1,8 @@
-"""Módulo estacion: Integridad, aturdimiento, desestabilización y valores mejorados.
+"""Módulo estacion: integridad, aturdimiento, desestabilización y valores mejorados.
 
-Se implementa en un sprint posterior (`software/sprints.md`).
+Ver `software/modulos/estacion.md`.
 """
+
+from atalaya.logica.estacion.estacion import Estacion
+
+__all__ = ["Estacion"]

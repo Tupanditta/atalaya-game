@@ -1,4 +1,4 @@
-"""Pruebas del módulo oleadas: aparición de enemigos (Sprint 2)."""
+"""Pruebas del módulo oleadas: aparición de enemigos (Sprint 2) y fin de oleada (Sprint 3)."""
 
 import itertools
 
@@ -12,7 +12,9 @@ from atalaya.logica.nucleo.eventos import (
     EnemigoDestruido,
     EstacionDestruida,
     OleadaIniciada,
+    OleadaSuperada,
     PartidaAbandonada,
+    PartidaGanada,
     PartidaIniciada,
     SolicitudAparicion,
 )
@@ -141,3 +143,98 @@ def test_detener_las_oleadas(parametros: Parametros, evento: object) -> None:
     assert not partida.oleadas.en_curso
     assert partida.oleadas.restantes == 0
     assert partida.enemigos.activos == ()
+
+
+# --- fin de oleada (Sprint 3) --------------------------------------------------------
+
+
+def _destruir_todos(partida: Partida, segundos_maximos: float = 60) -> None:
+    """Destruye a cada enemigo en cuanto aparece, hasta que no quedan en la oleada."""
+    numero = partida.oleadas.numero
+    for _ in range(round(segundos_maximos / PASO)):
+        if partida.oleadas.numero != numero:
+            return
+        while partida.enemigos.activos:
+            partida.destruir_uno()
+        partida.avanzar(PASO)
+    raise AssertionError("La oleada no ha terminado")
+
+
+def test_s3_t17_rn15_fin_de_oleada(parametros: Parametros) -> None:
+    """S3-T17 RN-15: destruir los 3 enemigos de la oleada 1 la supera y empieza la 2."""
+    partida = Partida(parametros)
+    eventos: list[object] = []
+    partida.nucleo.bus.suscribir(OleadaSuperada, eventos.append)
+    partida.nucleo.bus.suscribir(OleadaIniciada, eventos.append)
+    partida.nucleo.bus.publicar(PartidaIniciada(nivel=1))
+    partida.nucleo.bus.entregar()
+    eventos.clear()
+    _destruir_todos(partida)
+    assert len(eventos) == 2
+    superada, iniciada = eventos
+    assert isinstance(superada, OleadaSuperada)
+    assert (superada.numero, superada.enemigos) == (1, 3)
+    assert iniciada == OleadaIniciada(2, parametros.entorno_oleada(2))
+    assert partida.oleadas.numero == 2
+    assert partida.oleadas.en_curso
+    assert partida.oleadas.restantes == parametros.composicion_oleada(2).numero_enemigos
+
+
+def test_s3_t18_cronometro(parametros: Parametros) -> None:
+    """S3-T18: el último enemigo destruido 20 s después de aparecer el primero da 20 s."""
+    partida = Partida(parametros)
+    superadas: list[OleadaSuperada] = []
+    partida.nucleo.bus.suscribir(OleadaSuperada, superadas.append)
+    partida.oleadas.iniciar_oleada(1)
+    partida.avanzar(PASO)
+    (primera, _), *_ = partida.solicitudes
+    assert partida.oleadas.cronometro == 0
+    while partida.oleadas.pendientes:
+        partida.avanzar(PASO)
+    partida.destruir_uno()
+    partida.destruir_uno()
+    partida.avanzar((primera + round(20 / PASO) - partida.paso) * PASO)
+    assert partida.oleadas.cronometro == pytest.approx(20, abs=PASO)
+    partida.destruir_uno()
+    (superada,) = superadas
+    assert superada.tiempo == pytest.approx(20, abs=PASO + 1e-9)
+    # La oleada siguiente empieza con el cronómetro parado hasta su primera aparición.
+    assert partida.oleadas.cronometro == 0
+    partida.avanzar(PASO)
+    assert partida.oleadas.cronometro == 0
+
+
+def test_rn19_ultima_oleada_gana_la_partida(parametros: Parametros) -> None:
+    """RN-19: superar la última oleada publica PartidaGanada en lugar de OleadaSuperada."""
+    bus = Bus()
+    ganadas: list[PartidaGanada] = []
+    superadas: list[OleadaSuperada] = []
+    bus.suscribir(PartidaGanada, ganadas.append)
+    bus.suscribir(OleadaSuperada, superadas.append)
+    oleadas = Oleadas(bus, parametros)
+    bus.publicar(PartidaIniciada(nivel=2))
+    bus.entregar()
+    ultima = parametros.oleadas.numero_oleadas
+    oleadas.iniciar_oleada(ultima)
+    while oleadas.restantes:
+        oleadas.actualizar(PASO)
+        bus.entregar()
+        for _ in range(oleadas.activos):
+            bus.publicar(EnemigoDestruido(0, CERO))
+        bus.entregar()
+    assert ganadas == [PartidaGanada(2)]
+    assert superadas == []
+    assert not oleadas.en_curso
+    assert oleadas.numero == ultima
+
+
+def test_destruccion_fuera_de_oleada_no_cuenta(parametros: Parametros) -> None:
+    """Un EnemigoDestruido sin oleada en curso no cambia nada."""
+    bus = Bus()
+    superadas: list[OleadaSuperada] = []
+    bus.suscribir(OleadaSuperada, superadas.append)
+    oleadas = Oleadas(bus, parametros)
+    bus.publicar(EnemigoDestruido(1, CERO))
+    bus.entregar()
+    assert superadas == []
+    assert oleadas.numero == 0

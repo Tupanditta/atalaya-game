@@ -4,18 +4,18 @@
 - **Actor principal:** ACT-01
 - **Actores secundarios:** ninguno
 - **Objetivo:** Dañar o destruir a un enemigo.
-- **Requisitos relacionados:** RF-05, RF-06, RF-11, RF-12, RF-13, RF-28, RF-32, RF-33, RNF-01, RNF-02, RNF-03, RNF-05, RN-03, RN-04, RN-05, RN-06, RN-07, RN-12, RN-13, RN-22, RN-23, RN-29, RN-37, RN-38, RN-39, RN-40, RES-03, RES-04, RES-05, RES-06
+- **Requisitos relacionados:** RF-05, RF-06, RF-11, RF-12, RF-13, RF-32, RF-33, RF-46, RNF-01, RNF-02, RNF-03, RNF-05, RN-03, RN-04, RN-05, RN-06, RN-07, RN-12, RN-13, RN-22, RN-23, RN-29, RN-37, RN-38, RN-39, RN-40, RES-03, RES-04, RES-05, RES-06
 
 ## Precondiciones
 - Hay una partida en curso.
 
 ## Disparador
-El jugador pulsa la barra espaciadora.
+El jugador pulsa la barra espaciadora o el botón izquierdo del ratón. En este caso de uso, «barra espaciadora» incluye siempre el botón izquierdo del ratón, que funciona igual.
 
 ## Flujo principal
 1. El jugador pulsa la barra espaciadora y la mantiene pulsada.
 2. El sistema reduce la mira y acerca la imagen (zoom) de forma continua.
-3. El jugador gira la vista para mantener al enemigo dentro de la mira (CU-02). Cuanto mayor es el zoom, más lento es el giro.
+3. El jugador mueve la mira con el ratón o gira la vista para mantener al enemigo dentro de la mira (CU-02). Cuanto mayor es el zoom, más lento es el giro.
 4. La mira llega a su tamaño mínimo. El sistema deja de reducirla y mantiene el zoom máximo.
 5. El jugador suelta la barra espaciadora.
 6. El sistema comprueba que el jugador no está aturdido y que la energía disponible cubre el coste del disparo.

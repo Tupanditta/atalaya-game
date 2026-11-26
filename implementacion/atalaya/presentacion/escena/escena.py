@@ -1,8 +1,9 @@
 """Ventana y escena 3D (`modulos/escena.md`).
 
-Versión de S2: ventana a pantalla completa, cámara orientada según `vista`, fondo 1,
-enemigos, rayo del disparo, destello de impacto y explosión básica. Los proyectiles,
-el daño recibido, los entornos y los cambios de fondo llegan en sprints posteriores.
+Versión de S3: ventana a pantalla completa, cámara orientada según `vista`, fondo 1,
+enemigos con su destello de aviso, proyectiles, rayo del disparo, destello de impacto,
+explosión básica y daño recibido (temblor y tinte rojo). Los entornos y los cambios de
+fondo llegan en sprints posteriores.
 """
 
 import math
@@ -18,13 +19,14 @@ from panda3d.core import (
     load_prc_file_data,
 )
 
-from atalaya.logica.enemigos import Enemigos, distancia_impacto
+from atalaya.logica.enemigos import Enemigos, FaseAtaque, distancia_impacto
 from atalaya.logica.nucleo.bus import Bus, Evento
 from atalaya.logica.nucleo.dominio import Tamano, Vector3
 from atalaya.logica.nucleo.eventos import (
     DisparoRealizado,
     EnemigoAlcanzado,
     EnemigoDestruido,
+    EstacionDanada,
     EstacionDestruida,
     PartidaAbandonada,
     PartidaIniciada,
@@ -32,14 +34,17 @@ from atalaya.logica.nucleo.eventos import (
 from atalaya.logica.parametros import Parametros
 from atalaya.logica.vista import Vista, interpolar
 from atalaya.presentacion.escena.efectos import (
+    DanoRecibido,
     Destello,
     Efecto,
     Explosion,
+    Proyectil,
     Rayo,
+    brillo,
     textura_brillo,
 )
 from atalaya.presentacion.escena.fondo import cubo_de_cielo, textura_fondo
-from atalaya.presentacion.escena.modelos import modelo_enemigo
+from atalaya.presentacion.escena.modelos import COLOR_TIPO, modelo_enemigo
 
 #: Resolución si el sistema no informa de la de la pantalla (`design.md`, sección 6).
 ANCHO = 1920
@@ -59,17 +64,23 @@ _EVENTOS = (
     DisparoRealizado,
     EnemigoAlcanzado,
     EnemigoDestruido,
+    EstacionDanada,
     PartidaIniciada,
     PartidaAbandonada,
     EstacionDestruida,
 )
 
+#: Destello de aviso de disparo, en radios del enemigo: crece durante el aviso (RN-34).
+_AVISO_TAMANO_INICIAL = 1.5
+_AVISO_TAMANO_FINAL = 6.0
+
 
 def crear_ventana() -> ShowBase:
     """Abre la ventana del juego a pantalla completa con la resolución nativa de la pantalla.
 
-    Sin ratón (RES-04). La cámara adapta el campo de visión horizontal a la proporción
-    de la pantalla, así que cualquier resolución se ve sin deformar.
+    Cursor oculto: la mira del HUD hace de cursor (RES-04). La cámara adapta el campo de
+    visión horizontal a la proporción de la pantalla, así que cualquier resolución se ve
+    sin deformar.
     """
     load_prc_file_data(
         "atalaya",
@@ -116,7 +127,10 @@ class Escena:
         self._iluminar()
         self._brillo = textura_brillo()
         self._modelos: dict[int, NodePath] = {}
+        self._avisos: dict[int, NodePath] = {}
         self._tamanos: dict[int, Tamano] = {}
+        self._proyectiles: dict[int, Proyectil] = {}
+        self._dano = DanoRecibido(base.render2d)
         self._efectos: list[Efecto] = []
         self._eventos: list[Evento] = []
         for tipo in _EVENTOS:
@@ -140,7 +154,9 @@ class Escena:
         self._ajustar_lente(v.campo_vision)
         # Los efectos nuevos aparecen en este mismo fotograma (RNF-05).
         self._procesar_eventos()
+        self._dano.avanzar(dt, self._base.camera)
         self._colocar_enemigos(fraccion)
+        self._colocar_proyectiles(fraccion)
         self._efectos = [e for e in self._efectos if e.avanzar(dt)]
 
     # --- enemigos --------------------------------------------------------------------
@@ -160,6 +176,7 @@ class Escena:
         activos = {e.id: e for e in self._enemigos.activos}
         for id in [i for i in self._modelos if i not in activos]:
             self._modelos.pop(id).remove_node()
+            self._avisos.pop(id, None)
             self._tamanos.pop(id, None)
         for id, enemigo in activos.items():
             modelo = self._modelos.get(id)
@@ -167,6 +184,7 @@ class Escena:
                 modelo = modelo_enemigo(enemigo.tipo, self._radio(enemigo.tamano))
                 modelo.reparent_to(self._mundo)
                 self._modelos[id] = modelo
+                self._avisos[id] = brillo(modelo, self._brillo, COLOR_TIPO[enemigo.tipo])
                 self._tamanos[id] = enemigo.tamano
             a, b = Vec3(*enemigo.posicion_anterior), Vec3(*enemigo.posicion)
             posicion = a + (b - a) * fraccion
@@ -174,6 +192,32 @@ class Escena:
             velocidad = Vec3(*enemigo.velocidad)
             if velocidad.length() > 1e-3:
                 modelo.look_at(posicion + velocidad, Vec3(0, 0, 1))
+            self._mostrar_aviso(self._avisos[id], enemigo.fase, enemigo.tiempo_fase)
+
+    def _mostrar_aviso(self, aviso: NodePath, fase: FaseAtaque, restante: float) -> None:
+        """Destello creciente del color del tipo mientras dura el aviso de disparo."""
+        if fase is not FaseAtaque.AVISO:
+            aviso.hide()
+            return
+        duracion = self._parametros.ataques.duracion_aviso
+        progreso = min(1.0, max(0.0, 1 - restante / duracion))
+        aviso.show()
+        tamano = _AVISO_TAMANO_INICIAL + (_AVISO_TAMANO_FINAL - _AVISO_TAMANO_INICIAL) * progreso
+        aviso.set_scale(tamano)
+        aviso.set_alpha_scale(0.25 + 0.75 * progreso)
+
+    def _colocar_proyectiles(self, fraccion: float) -> None:
+        """Crea, mueve y borra los proyectiles para que coincidan con los que vuelan."""
+        en_vuelo = {p.id: p for p in self._enemigos.proyectiles}
+        for id in [i for i in self._proyectiles if i not in en_vuelo]:
+            self._proyectiles.pop(id).quitar()
+        for id, proyectil in en_vuelo.items():
+            dibujo = self._proyectiles.get(id)
+            if dibujo is None:
+                dibujo = Proyectil(self._mundo, self._brillo, COLOR_TIPO[proyectil.tipo_enemigo])
+                self._proyectiles[id] = dibujo
+            a, b = Vec3(*proyectil.posicion_anterior), Vec3(*proyectil.posicion)
+            dibujo.colocar(a + (b - a) * fraccion, Vec3(*proyectil.velocidad))
 
     def _radio(self, tamano: Tamano) -> float:
         return self._parametros.tamanos.de(tamano).radio_impacto
@@ -206,6 +250,8 @@ class Escena:
                         self._mundo, self._brillo, Vec3(*evento.posicion), self._radio(tamano)
                     )
                 )
+            elif isinstance(evento, EstacionDanada):
+                self._dano.recibir()
             else:
                 self._limpiar()
                 disparo, impacto = None, None
@@ -241,7 +287,12 @@ class Escena:
         for modelo in self._modelos.values():
             modelo.remove_node()
         self._modelos.clear()
+        self._avisos.clear()
         self._tamanos.clear()
+        for proyectil in self._proyectiles.values():
+            proyectil.quitar()
+        self._proyectiles.clear()
+        # El daño recibido no se corta: el último impacto también se ve al caer la estación.
         for efecto in self._efectos:
             efecto.avanzar(math.inf)
         self._efectos.clear()

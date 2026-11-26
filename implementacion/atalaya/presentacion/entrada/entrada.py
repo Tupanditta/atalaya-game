@@ -1,7 +1,8 @@
-"""Traducción del teclado a acciones del jugador (`modulos/entrada.md`).
+"""Traducción del teclado y del ratón a acciones del jugador (`modulos/entrada.md`).
 
-No depende del motor: lee las teclas de una `FuenteTeclado`. El adaptador de Panda3D
-está en `panda.py`; las pruebas usan una fuente falsa.
+No depende del motor: lee las teclas de una `FuenteTeclado` y la posición del ratón de
+una `FuenteRaton`. Los adaptadores de Panda3D están en `panda.py`; las pruebas usan
+fuentes falsas.
 """
 
 from collections.abc import Mapping
@@ -10,16 +11,18 @@ from typing import Protocol
 
 from atalaya.logica.nucleo.dominio import Accion
 
-#: Tecla de cada acción, con los nombres de botón del motor. El ratón no se usa (RES-04).
-TECLAS: Mapping[Accion, str] = MappingProxyType(
+#: Teclas de cada acción, con los nombres de botón del motor. Cualquiera de ellas activa
+#: la acción: W, A, S y D equivalen a las flechas, y el botón izquierdo del ratón
+#: («mouse1») a la barra espaciadora.
+TECLAS: Mapping[Accion, tuple[str, ...]] = MappingProxyType(
     {
-        Accion.IZQUIERDA: "arrow_left",
-        Accion.DERECHA: "arrow_right",
-        Accion.ARRIBA: "arrow_up",
-        Accion.ABAJO: "arrow_down",
-        Accion.DISPARO: "space",
-        Accion.PAUSA: "escape",
-        Accion.CONFIRMAR: "enter",
+        Accion.IZQUIERDA: ("arrow_left", "a"),
+        Accion.DERECHA: ("arrow_right", "d"),
+        Accion.ARRIBA: ("arrow_up", "w"),
+        Accion.ABAJO: ("arrow_down", "s"),
+        Accion.DISPARO: ("space", "mouse1"),
+        Accion.PAUSA: ("escape",),
+        Accion.CONFIRMAR: ("enter",),
     }
 )
 
@@ -34,12 +37,22 @@ class FuenteTeclado(Protocol):
         """Indica si la ventana del juego tiene el foco del teclado."""
 
 
-class Entrada:
-    """Estado de cada acción en el paso actual: mantenida, recién pulsada o recién soltada."""
+class FuenteRaton(Protocol):
+    """Posición del ratón en el momento de la consulta."""
 
-    def __init__(self, fuente: FuenteTeclado) -> None:
+    def posicion(self) -> tuple[float, float] | None:
+        """Posición en medias alturas de ventana desde su centro (`y` hacia arriba, de
+        −1 a 1; `x` hacia la derecha), o `None` si el ratón está fuera de la ventana."""
+
+
+class Entrada:
+    """Estado de cada acción en el paso actual y posición de la mira que marca el ratón."""
+
+    def __init__(self, fuente: FuenteTeclado, raton: FuenteRaton | None = None) -> None:
         self._fuente = fuente
-        self._teclas = frozenset(TECLAS.values())
+        self._raton = raton
+        self._puntero = (0.0, 0.0)
+        self._teclas = frozenset(t for teclas in TECLAS.values() for t in teclas)
         self._actuales: frozenset[Accion] = frozenset()
         self._previas: frozenset[Accion] = frozenset()
 
@@ -52,9 +65,15 @@ class Entrada:
         self._previas = self._actuales
         if self._fuente.tiene_foco():
             pulsadas = self._fuente.pulsadas(self._teclas)
-            self._actuales = frozenset(a for a, tecla in TECLAS.items() if tecla in pulsadas)
+            self._actuales = frozenset(
+                a for a, teclas in TECLAS.items() if any(t in pulsadas for t in teclas)
+            )
         else:
             self._actuales = frozenset()
+        # Fuera de la ventana, la mira se queda donde estaba.
+        posicion = self._raton.posicion() if self._raton is not None else None
+        if posicion is not None:
+            self._puntero = posicion
 
     def mantenida(self, accion: Accion) -> bool:
         """Indica si la tecla de la acción está pulsada en este paso."""
@@ -63,6 +82,10 @@ class Entrada:
     def recien_pulsada(self, accion: Accion) -> bool:
         """Indica si la tecla se ha pulsado en este paso."""
         return accion in self._actuales and accion not in self._previas
+
+    def puntero(self) -> tuple[float, float]:
+        """Posición de la mira en la pantalla según el ratón; el centro sin ratón."""
+        return self._puntero
 
     def recien_soltada(self, accion: Accion) -> bool:
         """Indica si la tecla se ha soltado en este paso."""

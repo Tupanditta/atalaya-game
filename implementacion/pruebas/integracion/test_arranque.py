@@ -87,3 +87,54 @@ def test_s2_partida_con_enemigos_y_disparo(parametros: Parametros) -> None:
     assert juego.armamento.energia == pytest.approx(
         parametros.jugador.energia_maxima - parametros.jugador.coste_disparo
     )
+
+
+class RatonFalso:
+    def __init__(self, posicion: tuple[float, float]) -> None:
+        self._posicion = posicion
+
+    def posicion(self) -> tuple[float, float] | None:
+        return self._posicion
+
+
+def test_el_disparo_sale_hacia_la_mira_del_raton(parametros: Parametros) -> None:
+    """El disparo sale hacia donde el ratón ha puesto la mira, dentro de su dispersión."""
+    from atalaya.logica.nucleo.eventos import DisparoRealizado
+    from atalaya.logica.nucleo.vectores import angulo_entre
+
+    teclado = TecladoFalso()
+    juego = montar(parametros, teclado, semilla=3, raton=RatonFalso((0.6, 0.4)))
+    disparos: list[DisparoRealizado] = []
+    juego.nucleo.bus.suscribir(DisparoRealizado, disparos.append)
+    juego.flujo.iniciar_partida()
+    juego.nucleo.avanzar(PASO)
+    teclado.teclas = {"space"}
+    juego.nucleo.avanzar(PASO)
+    teclado.teclas = set()
+    juego.nucleo.avanzar(PASO)
+    (disparo,) = disparos
+    assert juego.vista.puntero == (0.6, 0.4)
+    mira = juego.vista.direccion_mira
+    assert angulo_entre(mira, juego.vista.adelante) > 20
+    assert angulo_entre(disparo.direccion, mira) <= parametros.jugador.mira_normal + 1e-9
+
+
+def test_wasd_y_clic(parametros: Parametros) -> None:
+    """D gira la vista como la flecha derecha, y el clic izquierdo dispara al soltarlo."""
+    from atalaya.logica.nucleo.eventos import DisparoRealizado
+
+    teclado = TecladoFalso()
+    juego = montar(parametros, teclado, semilla=1)
+    disparos: list[DisparoRealizado] = []
+    juego.nucleo.bus.suscribir(DisparoRealizado, disparos.append)
+    juego.flujo.iniciar_partida()
+    derecha = juego.vista.derecha
+    teclado.teclas = {"d"}
+    for _ in range(60):
+        juego.nucleo.avanzar(PASO)
+    assert juego.vista.adelante == pytest.approx(derecha, abs=1e-9)
+    teclado.teclas = {"mouse1"}
+    juego.nucleo.avanzar(PASO)
+    teclado.teclas = set()
+    juego.nucleo.avanzar(PASO)
+    assert len(disparos) == 1

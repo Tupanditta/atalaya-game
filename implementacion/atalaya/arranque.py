@@ -8,12 +8,14 @@ from dataclasses import dataclass
 
 from atalaya.logica.armamento import Armamento
 from atalaya.logica.enemigos import Enemigos
+from atalaya.logica.estacion import Estacion
 from atalaya.logica.flujo import Flujo
 from atalaya.logica.nucleo import Etapa, Nucleo
 from atalaya.logica.oleadas import Oleadas
 from atalaya.logica.parametros import Parametros, cargar
+from atalaya.logica.radar import Radar
 from atalaya.logica.vista import Vista
-from atalaya.presentacion.entrada import Entrada, FuenteTeclado
+from atalaya.presentacion.entrada import Entrada, FuenteRaton, FuenteTeclado
 
 
 @dataclass(frozen=True)
@@ -27,16 +29,25 @@ class Juego:
     armamento: Armamento
     enemigos: Enemigos
     oleadas: Oleadas
+    estacion: Estacion
+    radar: Radar
 
 
-def montar(parametros: Parametros, teclado: FuenteTeclado, semilla: int | None = None) -> Juego:
+def montar(
+    parametros: Parametros,
+    teclado: FuenteTeclado,
+    semilla: int | None = None,
+    raton: FuenteRaton | None = None,
+) -> Juego:
     """Crea los módulos en orden, inyecta sus dependencias y los registra en el núcleo."""
     nucleo = Nucleo(semilla)
-    entrada = Entrada(teclado)
+    entrada = Entrada(teclado, raton)
     vista = Vista(nucleo.bus, parametros)
     armamento = Armamento(nucleo.bus, parametros, vista, nucleo.azar)
     enemigos = Enemigos(nucleo.bus, parametros, nucleo.azar)
     oleadas = Oleadas(nucleo.bus, parametros)
+    estacion = Estacion(nucleo.bus, parametros)
+    radar = Radar(parametros, vista, enemigos)
     flujo = Flujo(nucleo.bus, entrada, vista, armamento)
     nucleo.registrar(Etapa.ENTRADA, entrada)
     nucleo.registrar(Etapa.FLUJO, flujo)
@@ -44,7 +55,9 @@ def montar(parametros: Parametros, teclado: FuenteTeclado, semilla: int | None =
     nucleo.registrar(Etapa.ARMAMENTO, armamento)
     nucleo.registrar(Etapa.ENEMIGOS, enemigos)
     nucleo.registrar(Etapa.OLEADAS, oleadas)
-    return Juego(nucleo, entrada, flujo, vista, armamento, enemigos, oleadas)
+    # `estacion` aún no tiene nada que actualizar en cada paso: los efectos con duración
+    # (aturdimiento y desestabilización) llegan en S4.
+    return Juego(nucleo, entrada, flujo, vista, armamento, enemigos, oleadas, estacion, radar)
 
 
 def main() -> None:
@@ -53,15 +66,27 @@ def main() -> None:
     from direct.task import Task
     from panda3d.core import ClockObject
 
-    from atalaya.presentacion.entrada.panda import FuenteTecladoPanda
+    from atalaya.presentacion.audio import Audio
+    from atalaya.presentacion.entrada.panda import FuenteRatonPanda, FuenteTecladoPanda
     from atalaya.presentacion.escena import Escena, crear_ventana
     from atalaya.presentacion.hud import Hud
 
     parametros = cargar()
     base = crear_ventana()
-    juego = montar(parametros, FuenteTecladoPanda(base))
+    juego = montar(parametros, FuenteTecladoPanda(base), raton=FuenteRatonPanda(base))
     escena = Escena(base, juego.nucleo.bus, juego.vista, juego.enemigos, parametros)
-    hud = Hud(base, juego.nucleo.bus, parametros, juego.armamento)
+    hud = Hud(
+        base,
+        juego.nucleo.bus,
+        parametros,
+        juego.armamento,
+        juego.vista,
+        juego.radar,
+        juego.estacion,
+        juego.oleadas,
+        juego.flujo,
+    )
+    Audio(base, juego.nucleo.bus, parametros)
     reloj = ClockObject.get_global_clock()
 
     def fotograma(tarea: Task.Task) -> int:

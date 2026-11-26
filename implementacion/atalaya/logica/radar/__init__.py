@@ -1,4 +1,8 @@
-"""Módulo radar: Contactos del radar respecto a la cámara.
+"""Módulo radar: contactos del radar respecto a la cámara.
 
-Se implementa en un sprint posterior (`software/sprints.md`).
+Ver `software/modulos/radar.md`.
 """
+
+from atalaya.logica.radar.radar import ANGULO_MISMA_ALTURA, Altura, Contacto, Radar
+
+__all__ = ["ANGULO_MISMA_ALTURA", "Altura", "Contacto", "Radar"]

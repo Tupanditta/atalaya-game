@@ -28,6 +28,9 @@ from panda3d.core import (
 Color = tuple[float, float, float, float]
 Punto = tuple[float, float]
 
+#: Orden de dibujo de los paneles: debajo de todo lo demás del HUD (`capa`).
+ORDEN_PANEL = 0
+
 #: Fuentes candidatas, por orden de preferencia. Rajdhani es la de `interfaz.md`; si no
 #: está en `recursos/fuentes/`, se usa la alternativa de las maquetas.
 _FUENTES = [
@@ -63,6 +66,17 @@ def cargar_fuente(base: ShowBase) -> TextFont | None:
                 fuente.set_pixels_per_unit(64)
                 return fuente
     return None
+
+
+def capa(padre: NodePath, nombre: str, orden: int) -> NodePath:
+    """Nodo cuyo contenido se dibuja en el orden `orden`: los mayores, encima.
+
+    Todo el HUD está a la misma profundidad, así que el orden de dibujo se fija aquí y no
+    depende de cómo ordene el motor los objetos transparentes.
+    """
+    nodo = padre.attach_new_node(nombre)
+    nodo.set_bin("fixed", orden)
+    return nodo
 
 
 def preparar(nodo: NodePath) -> NodePath:
@@ -135,8 +149,9 @@ def panel(padre: NodePath, x: float, y: float, ancho: float, alto: float, escala
         (x, y + alto),
         (x, y + recorte),
     ]
-    poligono(padre, puntos, color("#0A1220", 0.78))
-    linea(padre, [*puntos, puntos[0]], color("#2AD4FF", 0.35), 1, escala)
+    poligono(padre, puntos, color("#0A1220", 0.78)).set_bin("fixed", ORDEN_PANEL)
+    borde = linea(padre, [*puntos, puntos[0]], color("#2AD4FF", 0.35), 1, escala)
+    borde.set_bin("fixed", ORDEN_PANEL + 1)
 
 
 class Texto:
@@ -150,12 +165,14 @@ class Texto:
         y: float,
         tamano: float,
         alineacion: int = TextNode.A_left,
+        orden: int = 50,
     ) -> None:
         self._nodo = TextNode("texto")
         if fuente is not None:
             self._nodo.set_font(fuente)
         self._nodo.set_align(alineacion)
         self._camino = preparar(padre.attach_new_node(self._nodo))
+        self._camino.set_bin("fixed", orden)
         # La línea base del texto queda en la y indicada, como en las maquetas SVG.
         self._camino.set_pos(x, 0, -y)
         self._camino.set_scale(tamano)

@@ -1,13 +1,13 @@
 # Módulo hud
 
 - **Capa:** presentación
-- **Cubre:** CU-01, CU-05, CU-08 a CU-12 (presentación); RF-06, RF-07, RF-08, RF-11, RF-15, RF-16, RF-19, RF-22, RF-23, RF-24, RF-28, RF-31, RF-34, RF-39, RF-40, RF-43
+- **Cubre:** CU-01, CU-05, CU-08 a CU-12 (presentación); RF-06, RF-07, RF-08, RF-11, RF-15, RF-16, RF-19, RF-22, RF-23, RF-24, RF-31, RF-46, RF-34, RF-39, RF-40, RF-43
 
 ## Responsabilidad
 Dibujar todo lo que va encima de la escena 3D: la mira, los indicadores, el radar, las transmisiones, los menús y las pantallas.
 
 ## Durante una oleada
-- **Mira:** círculo en el centro de la pantalla con el tamaño de `armamento`, desplazado por el desvío de `vista` durante la desestabilización.
+- **Mira:** círculo con el tamaño de `armamento`, en la posición de la pantalla que marca `vista` (el ratón), desplazado por el desvío de `vista` durante la desestabilización.
 - **Radar:** contactos de `radar` con su símbolo, color, tamaño y marca de altura, y el sector del campo de visión.
 - **Energía:** barra con la energía actual y máxima. Parpadea al recibir DisparoSinEnergia.
 - **Integridad:** barra con la integridad actual y máxima, y el nivel de dificultad al lado.
@@ -38,7 +38,7 @@ Dibujar todo lo que va encima de la escena 3D: la mira, los indicadores, el rada
   - TransmisionDisponible, PartidaIniciada.
 
 ## Depende de
-El motor gráfico; radar, armamento, estacion, oleadas, mejoras, historia, flujo, progreso y parametros (solo lectura).
+El motor gráfico; vista, radar, armamento, estacion, oleadas, mejoras, historia, flujo, progreso y parametros (solo lectura).
 
 ## No hace
 - No decide qué pantalla toca ni qué hace cada opción: lo decide `flujo`.

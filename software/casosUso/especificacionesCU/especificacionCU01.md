@@ -48,7 +48,7 @@ El jugador elige «Jugar» en el menú principal.
 
 ## Reglas de presentación
 - La mira, el radar, la barra de energía y la integridad de la estación son visibles durante toda la partida.
-- La mira está en el centro de la pantalla. El radar, la barra de energía, la integridad y el nivel de dificultad se colocan en los bordes, sin tapar el centro. La disposición exacta se especifica en `interfaz/`.
+- La mira empieza en el centro de la pantalla y el jugador la mueve con el ratón (CU-02). El radar, la barra de energía, la integridad y el nivel de dificultad se colocan en los bordes, sin tapar el centro. La disposición exacta se especifica en `interfaz/`.
 
 ## Postcondiciones
 - Hay una partida en curso en el nivel elegido, con la primera oleada activa y la energía y la integridad al máximo.

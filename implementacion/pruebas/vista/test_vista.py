@@ -223,3 +223,86 @@ def test_ejes_no_validos(parametros: Parametros, horizontal: int, vertical: int)
     vista, _ = _vista(parametros)
     with pytest.raises(ValueError, match="Ejes de giro"):
         vista.recibir_ejes(horizontal, vertical)
+
+
+# --- mira movida con el ratón --------------------------------------------------------
+
+
+def _con_puntero(parametros: Parametros, x: float, y: float) -> Vista:
+    vista, _ = _vista(parametros)
+    vista.recibir_puntero(x, y)
+    vista.actualizar(PASO)
+    return vista
+
+
+def test_mira_en_el_centro_apunta_adelante(parametros: Parametros) -> None:
+    """Con la mira en el centro de la pantalla, la mira apunta hacia «adelante»."""
+    vista = _con_puntero(parametros, 0.0, 0.0)
+    assert vista.puntero == (0.0, 0.0)
+    assert _cerca(vista.direccion_mira, vista.adelante)
+
+
+@pytest.mark.parametrize(
+    ("x", "y", "eje"),
+    [(0.0, 1.0, ARRIBA), (0.0, -1.0, ARRIBA), (1.0, 0.0, DERECHA), (-1.0, 0.0, DERECHA)],
+    ids=["arriba", "abajo", "derecha", "izquierda"],
+)
+def test_mira_en_el_borde_apunta_al_borde_de_la_vista(
+    parametros: Parametros, x: float, y: float, eje: Vector3
+) -> None:
+    """A una media altura del centro, la mira apunta a la mitad del campo de visión."""
+    vista = _con_puntero(parametros, x, y)
+    mitad = parametros.jugador.campo_vision_normal / 2
+    assert _angulo(vista.direccion_mira, ADELANTE) == pytest.approx(mitad)
+    signo = 1 if x + y > 0 else -1
+    assert signo * sum(a * b for a, b in zip(vista.direccion_mira, eje, strict=True)) > 0
+
+
+def test_mira_con_zoom(parametros: Parametros) -> None:
+    """RN-39: con zoom, el mismo punto de la pantalla apunta más cerca del centro."""
+    vista, bus = _vista(parametros)
+    vista.recibir_puntero(0.0, 1.0)
+    bus.publicar(ApuntadoCambiado(1.0))
+    bus.entregar()
+    vista.actualizar(PASO)
+    mitad = parametros.jugador.campo_vision_zoom / 2
+    assert _angulo(vista.direccion_mira, ADELANTE) == pytest.approx(mitad)
+
+
+def test_mira_sigue_a_la_camara(parametros: Parametros) -> None:
+    """RN-41: la mira se mide respecto a la cámara, también después de girarla."""
+    vista, _ = _vista(parametros)
+    for _ in range(_pasos_para(90, parametros)):
+        vista.recibir_ejes(1, 0)
+        vista.recibir_puntero(0.0, 1.0)
+        vista.actualizar(PASO)
+    mitad = parametros.jugador.campo_vision_normal / 2
+    assert _angulo(vista.direccion_mira, DERECHA) == pytest.approx(mitad)
+    assert _angulo(vista.direccion_mira, ARRIBA) == pytest.approx(90 - mitad)
+
+
+def test_mira_limitada_a_la_pantalla(parametros: Parametros) -> None:
+    """La mira no sale por arriba ni por abajo de la pantalla."""
+    vista = _con_puntero(parametros, 9.0, -3.0)
+    assert vista.puntero == (4.0, -1.0)
+
+
+def test_posicion_de_mira_no_valida(parametros: Parametros) -> None:
+    """Una posición que no es un número finito se rechaza."""
+    vista, _ = _vista(parametros)
+    with pytest.raises(ValueError, match="mira"):
+        vista.recibir_puntero(math.nan, 0.0)
+
+
+def test_mira_se_aplica_al_actualizar(parametros: Parametros) -> None:
+    """RN-50: la nueva posición se aplica en el siguiente paso, así que en pausa no se mueve."""
+    vista, bus = _vista(parametros)
+    vista.recibir_puntero(0.5, 0.5)
+    assert vista.puntero == (0.0, 0.0)
+    vista.actualizar(PASO)
+    assert vista.puntero == (0.5, 0.5)
+    bus.publicar(PartidaIniciada(nivel=1))
+    bus.entregar()
+    assert vista.puntero == (0.0, 0.0)
+    vista.actualizar(PASO)
+    assert vista.puntero == (0.0, 0.0)

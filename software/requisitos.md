@@ -78,6 +78,12 @@ Servicios que el juego ofrece (requisitos funcionales) y cualidades que debe cum
 - **Descripción:** El sistema debe mostrar la mira fija en el centro de la pantalla, de modo que el jugador apunte girando la vista con las flechas.
 - **Prioridad:** Alta
 - **Origen:** Usuario
+- **Estado:** Eliminado. Sustituido por RF-46: la mira se mueve por la pantalla con el ratón.
+
+### RF-46. Mover la mira con el ratón
+- **Descripción:** El sistema debe permitir que el jugador mueva la mira por la pantalla con el ratón durante una oleada, sin girar la vista, para apuntar a un enemigo visible sin tener que centrarlo. El disparo sale hacia donde está la mira.
+- **Prioridad:** Alta
+- **Origen:** Usuario
 - **Estado:** Confirmado
 
 ### RF-29. Fijar objetivo
@@ -307,8 +313,8 @@ Servicios que el juego ofrece (requisitos funcionales) y cualidades que debe cum
 - **Estado:** Confirmado
 
 ### RNF-03. Controles reducidos
-- **Descripción:** El juego debe manejarse solo con el teclado y con muy pocas teclas.
-- **Medida:** Durante una oleada solo se usan las cuatro flechas, la barra espaciadora y Esc (pausa). En los menús y pantallas solo se usan las flechas, Intro (confirmar) y Esc (volver). Ninguna acción requiere ratón.
+- **Descripción:** El juego debe manejarse con muy pocas teclas; el ratón solo mueve la mira y dispara.
+- **Medida:** Durante una oleada solo se usan las cuatro flechas o sus equivalentes W, A, S y D, la barra espaciadora o el botón izquierdo del ratón, Esc (pausa) y el movimiento del ratón para la mira. En los menús y pantallas solo se usan las flechas o W, A, S y D, Intro (confirmar) y Esc (volver). Cada tecla equivalente hace exactamente lo mismo que la original.
 - **Prioridad:** Alta
 - **Origen:** contexto.md, «Pilares del diseño»
 - **Estado:** Confirmado

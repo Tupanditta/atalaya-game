@@ -10,7 +10,7 @@ Límites de alcance y condiciones que deben respetarse en el diseño, la impleme
 
 ## Restricciones técnicas
 
-- **RES-04. Plataforma:** El juego se ejecuta en un ordenador y se controla solo con el teclado. El ratón, los mandos y las pantallas táctiles quedan fuera de alcance.
+- **RES-04. Plataforma:** El juego se ejecuta en un ordenador y se controla con el teclado. El ratón solo se usa durante una oleada, para mover la mira (RF-46) y para disparar con el botón izquierdo como alternativa a la barra espaciadora. Los mandos y las pantallas táctiles quedan fuera de alcance.
 - **RES-05. Lenguaje:** El código se implementa en Python. Las dependencias se instalan en el entorno virtual `implementacion/.venv`.
 
 ## Restricciones de datos y privacidad

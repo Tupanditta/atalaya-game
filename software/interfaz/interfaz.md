@@ -87,8 +87,9 @@ Las dos fuentes tienen licencia libre (SIL Open Font License) y se incluyen en `
 
 Ver `03-oleada.svg`, `04-apuntando.svg` y `05-aturdido.svg`.
 
-### Mira (centro)
-- Círculo de 2 px de grosor centrado en (960, 540), con cuatro marcas exteriores de 10 px y un punto central de 3 px.
+### Mira (sigue al ratón)
+- Círculo de 2 px de grosor con cuatro marcas exteriores de 10 px y un punto central de 3 px.
+- Empieza centrada en (960, 540) y se mueve con el ratón por toda la pantalla; no sale de ella. Sustituye al cursor, que no se muestra.
 - **Radio en pantalla** = 540 × tan(radio de la mira) ÷ tan(campo de visión ÷ 2). Con los parámetros iniciales:
   - unos 40 px con la mira normal,
   - unos 21 px con la mira al mínimo y el zoom máximo.
