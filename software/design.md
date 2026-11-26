@@ -73,7 +73,7 @@ Las versiones exactas se fijan en `implementacion/requirements.txt` (y `requirem
   - Rayo: línea luminosa que se desvanece en 0,1 s.
   - Explosiones: el sistema de partículas de Panda3D.
   - Temblor: desplazamiento de la cámara con ruido suave.
-- **Resolución:** 1920 × 1080 a pantalla completa por defecto. La interfaz se escala según la altura de la ventana.
+- **Resolución:** pantalla completa con la resolución nativa de la pantalla; 1920 × 1080 si el sistema no la informa. El campo de visión vertical es fijo y el horizontal se calcula con la proporción de la pantalla, para que la imagen no se deforme. La interfaz se escala según la altura de la ventana.
 - **Medición:** el medidor PStats de Panda3D se usa para comprobar RNF-01 en el equipo de referencia.
 
 ## 7. Sonido

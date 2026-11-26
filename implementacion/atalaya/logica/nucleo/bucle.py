@@ -80,6 +80,14 @@ class Nucleo:
         """Tiempo de partida acumulado, en segundos. No avanza durante la pausa."""
         return self._pasos_partida * PASO
 
+    @property
+    def fraccion_paso(self) -> float:
+        """Parte del siguiente paso ya acumulada, entre 0 y 1.
+
+        Sirve para interpolar entre los dos últimos pasos al dibujar (`design.md`, sección 4).
+        """
+        return min(1.0, self._acumulado / PASO)
+
     def avanzar(self, transcurrido: float) -> int:
         """Ejecuta los pasos de simulación que caben en `transcurrido` segundos reales.
 

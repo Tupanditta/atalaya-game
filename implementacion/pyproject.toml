@@ -9,6 +9,9 @@ description = "Prototipo del juego de defensa de la estación Atalaya"
 requires-python = ">=3.11,<3.12"
 dependencies = ["panda3d", "platformdirs"]
 
+[project.scripts]
+atalaya = "atalaya.arranque:main"
+
 [tool.setuptools.packages.find]
 include = ["atalaya*"]
 

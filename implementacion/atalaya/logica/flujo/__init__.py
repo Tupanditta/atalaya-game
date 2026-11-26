@@ -1,4 +1,8 @@
-"""Módulo flujo: Pantallas y estados del juego; reparte las acciones del jugador.
+"""Módulo flujo: pantallas y estados del juego; reparte las acciones del jugador.
 
-Se implementa en un sprint posterior (`software/sprints.md`).
+Ver `software/modulos/flujo.md`.
 """
+
+from atalaya.logica.flujo.flujo import Acciones, Flujo, Pantalla
+
+__all__ = ["Acciones", "Flujo", "Pantalla"]

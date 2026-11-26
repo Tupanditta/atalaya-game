@@ -1,4 +1,8 @@
-"""Módulo escena: Escena 3D, efectos visuales y cámara.
+"""Módulo escena: escena 3D, efectos visuales y cámara.
 
-Se implementa en un sprint posterior (`software/sprints.md`).
+Ver `software/modulos/escena.md`.
 """
+
+from atalaya.presentacion.escena.escena import Escena, crear_ventana
+
+__all__ = ["Escena", "crear_ventana"]

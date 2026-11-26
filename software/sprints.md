@@ -132,7 +132,7 @@ Comandos de verificación, desde la raíz del repositorio:
 
 ### Comprobaciones manuales
 
-- **S1-M01:** la ventana abre a pantalla completa en 1920 × 1080 con el fondo espacial.
+- **S1-M01:** la ventana abre a pantalla completa con la resolución nativa de la pantalla y el fondo espacial, sin deformar la imagen.
 - **S1-M02:** cada flecha gira la vista en su sentido en pantalla, también tras una media vuelta vertical.
 - **S1-M03:** el giro es suave y sin tirones (RNF-04) y responde al instante al pulsar y soltar (RNF-02).
 

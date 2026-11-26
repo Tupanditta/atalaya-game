@@ -1,4 +1,9 @@
-"""Módulo entrada: Teclado y acciones del jugador.
+"""Módulo entrada: teclado y acciones del jugador.
 
-Se implementa en un sprint posterior (`software/sprints.md`).
+Ver `software/modulos/entrada.md`. El adaptador del motor (`panda.py`) no se importa
+aquí, para que `Entrada` se pueda usar y probar sin Panda3D.
 """
+
+from atalaya.presentacion.entrada.entrada import TECLAS, Entrada, FuenteTeclado
+
+__all__ = ["TECLAS", "Entrada", "FuenteTeclado"]

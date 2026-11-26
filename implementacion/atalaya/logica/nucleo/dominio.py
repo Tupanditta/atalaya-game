@@ -40,3 +40,20 @@ class Mejora(Enum):
     BLINDAJE = "blindaje"
     BATERIA = "bateria"
     GENERADOR = "generador"
+
+
+class Accion(Enum):
+    """Acciones del jugador (`modulos/entrada.md`). Cada pantalla decide qué hace cada una.
+
+    Las cuatro direcciones giran la vista durante la oleada y navegan por los menús.
+    """
+
+    IZQUIERDA = "izquierda"
+    DERECHA = "derecha"
+    ARRIBA = "arriba"
+    ABAJO = "abajo"
+    #: Apuntar mientras se mantiene y disparar al soltar.
+    DISPARO = "disparo"
+    #: Pausa o volver.
+    PAUSA = "pausa"
+    CONFIRMAR = "confirmar"

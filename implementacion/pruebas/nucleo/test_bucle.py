@@ -129,3 +129,15 @@ def test_eventos_se_entregan_tras_cada_modulo() -> None:
     nucleo.registrar(Etapa.VISTA, ModuloFalso("VISTA", registro))
     nucleo.avanzar(PASO)
     assert registro == ["evento", "VISTA"]
+
+
+def test_fraccion_paso() -> None:
+    """La fracción del paso siguiente sirve para interpolar al dibujar."""
+    nucleo = Nucleo(semilla=1)
+    assert nucleo.fraccion_paso == 0.0
+    nucleo.avanzar(PASO * 1.25)
+    assert nucleo.fraccion_paso == pytest.approx(0.25)
+    nucleo.avanzar(PASO * 0.5)
+    assert nucleo.fraccion_paso == pytest.approx(0.75)
+    nucleo.avanzar(1.0)
+    assert nucleo.fraccion_paso == 0.0
