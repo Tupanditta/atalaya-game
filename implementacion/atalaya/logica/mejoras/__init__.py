@@ -1,4 +1,14 @@
-"""Módulo mejoras: Puntos de mejora, reparación y mejoras.
+"""Módulo mejoras: puntos de mejora, reparación y mejoras.
 
-Se implementa en un sprint posterior (`software/sprints.md`).
+Ver `software/modulos/mejoras.md`.
 """
+
+from atalaya.logica.mejoras.mejoras import (
+    Mejoras,
+    Motivo,
+    ResultadoOleada,
+    puntos_oleada,
+    tiempo_referencia,
+)
+
+__all__ = ["Mejoras", "Motivo", "ResultadoOleada", "puntos_oleada", "tiempo_referencia"]

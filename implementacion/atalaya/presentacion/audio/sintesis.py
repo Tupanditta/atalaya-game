@@ -1,8 +1,9 @@
 """Efectos de sonido generados por código: recursos propios (`design.md`, sección 14).
 
-Versión mínima de S3, más el aturdimiento de S4. Cada función devuelve las muestras de
-un sonido mono entre −1 y 1; `a_wav` las convierte en un archivo WAV en memoria. Los
-sonidos definitivos en OGG llegan en S9 (`design.md`, sección 7).
+Versión mínima de S3, más el aturdimiento de S4 y los sonidos de los menús de S5. Cada
+función devuelve las muestras de un sonido mono entre −1 y 1; `a_wav` las convierte en un
+archivo WAV en memoria. Los sonidos definitivos en OGG llegan en S9 (`design.md`,
+sección 7).
 """
 
 import io
@@ -132,6 +133,41 @@ def aturdimiento() -> list[float]:
         temblor = 0.65 + 0.35 * math.sin(2 * math.pi * 14 * t)
         tono = math.sin(fase(t)) + 0.35 * math.sin(2 * fase(t) + 0.5)
         return 0.32 * tono * temblor * _envolvente(t, d, 0.02)
+
+    return _muestras(d, onda)
+
+
+def menu_mover() -> list[float]:
+    """Mover la selección de un menú: un clic suave y agudo, 0,05 s."""
+    d = 0.05
+
+    def onda(t: float) -> float:
+        return 0.25 * math.sin(2 * math.pi * 1500 * t) * _envolvente(t, d, 0.002)
+
+    return _muestras(d, onda)
+
+
+def menu_confirmar() -> list[float]:
+    """Confirmar una opción de un menú: dos notas que suben, 0,16 s."""
+    d = 0.16
+
+    def onda(t: float) -> float:
+        frecuencia = 880.0 if t < 0.07 else 1320.0
+        inicio = 0.0 if t < 0.07 else 0.07
+        return 0.3 * math.sin(2 * math.pi * frecuencia * t) * _envolvente(t - inicio, 0.09, 0.003)
+
+    return _muestras(d, onda)
+
+
+def menu_error() -> list[float]:
+    """Opción no disponible (CU-11, A2): zumbido grave y áspero que baja, 0,22 s."""
+    d = 0.22
+    fase = _barrido(220.0, 150.0, d)
+
+    def onda(t: float) -> float:
+        cuadrada = 1.0 if math.sin(fase(t)) >= 0 else -1.0
+        final = min(1.0, (d - t) / 0.02)
+        return 0.22 * cuadrada * min(1.0, t / 0.005) * final
 
     return _muestras(d, onda)
 

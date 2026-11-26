@@ -147,10 +147,12 @@ def panel(
     escala: float,
     relleno: Color | None = None,
     borde: Color | None = None,
+    orden: int = ORDEN_PANEL,
 ) -> None:
     """Panel con dos esquinas recortadas, arriba a la izquierda y abajo a la derecha.
 
     Sin `relleno` ni `borde`, usa los colores fondo-panel y borde-panel de `interfaz.md`.
+    `orden` es el orden de dibujo del fondo; el borde va justo encima.
     """
     recorte = 12
     puntos = [
@@ -163,9 +165,17 @@ def panel(
     ]
     relleno = color("#0A1220", 0.78) if relleno is None else relleno
     borde = color("#2AD4FF", 0.35) if borde is None else borde
-    poligono(padre, puntos, relleno).set_bin("fixed", ORDEN_PANEL)
+    poligono(padre, puntos, relleno).set_bin("fixed", orden)
     contorno = linea(padre, [*puntos, puntos[0]], borde, 1, escala)
-    contorno.set_bin("fixed", ORDEN_PANEL + 1)
+    contorno.set_bin("fixed", orden + 1)
+
+
+def ancho_texto(fuente: TextFont | None, texto: str, tamano: float) -> float:
+    """Ancho en píxeles de diseño de `texto` escrito con `fuente` a `tamano` píxeles."""
+    nodo = TextNode("medida")
+    if fuente is not None:
+        nodo.set_font(fuente)
+    return float(nodo.calc_width(texto)) * tamano
 
 
 class Texto:

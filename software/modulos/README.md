@@ -48,7 +48,7 @@ Todos los módulos pueden usar `nucleo` y `parametros`. Además, solo se permite
 | radar | vista (orientación), enemigos (posiciones) |
 | escena | vista, enemigos, entorno, armamento |
 | hud | vista (posición de la mira), radar, armamento, estacion, oleadas, mejoras, historia, flujo, progreso, parametros |
-| audio | vista (oyente), enemigos (posiciones) |
+| audio | vista (oyente), enemigos (posiciones), flujo (sonidos de los menús) |
 
 Cualquier otra relación entre módulos se hace con eventos. Una consulta nueva debe añadirse antes a esta tabla.
 

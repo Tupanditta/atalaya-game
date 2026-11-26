@@ -1,9 +1,9 @@
 """HUD de la partida (`modulos/hud.md`, `interfaz/interfaz.md`, sección 6).
 
-Versión de S4: la mira, que sigue al ratón, el radar con el símbolo y el color de cada
+Versión de S5: la mira, que sigue al ratón, el radar con el símbolo y el color de cada
 tipo y tamaño, las barras de integridad y energía, el nivel, el panel de oleada, el
-aviso de aturdimiento y el resumen mínimo de derrota. Las transmisiones y los menús
-llegan en sprints posteriores.
+aviso de aturdimiento, la pantalla de mejoras del descanso (`mejoras.py`) y el resumen
+mínimo de derrota. Las transmisiones y los menús llegan en sprints posteriores.
 
 La mira desviada por desestabilización (RN-12) no se desplaza en la pantalla: `escena`
 gira la imagen con el desvío de `vista`, así que la mira queda desviada respecto a la
@@ -18,6 +18,7 @@ from panda3d.core import CardMaker, NodePath, TextNode, TransparencyAttrib
 from atalaya.logica.armamento import Armamento
 from atalaya.logica.estacion import Estacion
 from atalaya.logica.flujo import Flujo, Pantalla
+from atalaya.logica.mejoras import Mejoras
 from atalaya.logica.nucleo.bus import Bus
 from atalaya.logica.nucleo.dominio import Tamano, TipoEnemigo
 from atalaya.logica.nucleo.eventos import DisparoSinEnergia, PartidaIniciada
@@ -40,20 +41,20 @@ from atalaya.presentacion.hud.dibujo import (
     poligono,
     rectangulo,
 )
-
-#: Medidas de diseño (`interfaz.md`, sección 2).
-ANCHO_DISENO = 1920
-ALTO_DISENO = 1080
-
-TEXTO = color("#E6F1FF")
-TEXTO_SECUNDARIO = color("#8AA0B8")
-ACENTO = color("#2AD4FF")
-PISTA = color("#1A2638")
-AVISO = color("#FFB020")
-PELIGRO = color("#FF4D5E")
-INTEGRIDAD_ALTA = color("#3DDC84")
-FONDO_PANEL = color("#0A1220")
-VELO = color("#000000", 0.55)
+from atalaya.presentacion.hud.estilo import (
+    ACENTO,
+    ALTO_DISENO,
+    ANCHO_DISENO,
+    AVISO,
+    FONDO_PANEL,
+    PELIGRO,
+    PISTA,
+    TEXTO,
+    TEXTO_SECUNDARIO,
+    VELO,
+    color_integridad,
+)
+from atalaya.presentacion.hud.mejoras import PantallaMejoras
 
 #: Color de cada tipo de enemigo y de sus proyectiles (`interfaz.md`, sección 3).
 COLOR_TIPO: dict[TipoEnemigo, Color] = {
@@ -121,15 +122,6 @@ def radio_mira_en_pantalla(radio: float, campo_vision: float) -> float:
     """Radio de la mira en píxeles de diseño (`interfaz.md`, «Mira»)."""
     mitad = ALTO_DISENO / 2
     return mitad * math.tan(math.radians(radio)) / math.tan(math.radians(campo_vision) / 2)
-
-
-def color_integridad(fraccion: float) -> Color:
-    """Verde por encima del 50 %, ámbar entre el 25 % y el 50 %, rojo por debajo."""
-    if fraccion > 0.5:
-        return INTEGRIDAD_ALTA
-    if fraccion >= 0.25:
-        return AVISO
-    return PELIGRO
 
 
 def posicion_en_radar(contacto: Contacto) -> Punto:
@@ -228,6 +220,7 @@ class Hud:
         radar: Radar,
         estacion: Estacion,
         oleadas: Oleadas,
+        mejoras: Mejoras,
         flujo: Flujo,
     ) -> None:
         self._base = base
@@ -260,6 +253,9 @@ class Hud:
         self._integridad = _Barra(self._derecha, _INTEGRIDAD_Y)
         self._estaticos: list[NodePath] = []
         self._textos: dict[str, Texto] = {}
+        self._pantalla_mejoras = PantallaMejoras(
+            self._raiz, self._fuente, mejoras, estacion, oleadas, flujo
+        )
         bus.suscribir(DisparoSinEnergia, self._al_disparar_sin_energia)
         bus.suscribir(PartidaIniciada, self._al_iniciar_partida)
 
@@ -268,13 +264,17 @@ class Hud:
         self._ajustar_escala()
         self._tiempo += dt
         self._desde_sin_energia += dt
-        derrota = self._flujo.pantalla is Pantalla.RESUMEN
+        pantalla = self._flujo.pantalla
+        derrota = pantalla is Pantalla.RESUMEN
+        descanso = pantalla is Pantalla.DESCANSO
         aturdido = self._estacion.aturdido and not derrota
-        self._dibujar_mira(visible=not derrota, aturdida=aturdido)
+        # En el descanso no se apunta: la mira solo se ve durante la oleada.
+        self._dibujar_mira(visible=not (derrota or descanso), aturdida=aturdido)
         self._dibujar_radar()
         self._dibujar_estado(dt)
         self._dibujar_oleada()
         self._dibujar_aturdimiento(aturdido)
+        self._pantalla_mejoras.dibujar(descanso, self._escala, self._ancho_diseno, dt)
         self._dibujar_resumen(derrota)
 
     # --- escala y anclajes -----------------------------------------------------------
@@ -296,6 +296,7 @@ class Hud:
         self._clave_sector = None
         self._energia.olvidar()
         self._integridad.olvidar()
+        self._pantalla_mejoras.olvidar()
         if self._velo is not None:
             self._velo.remove_node()
             self._velo = None

@@ -50,6 +50,7 @@ Saber en qué pantalla está el juego y decidir qué hace cada acción del jugad
   - En los menús, mueve la selección o ejecuta la opción elegida.
 - En la pantalla de mejoras, ejecuta en `mejoras` la opción elegida (reparar o mejorar).
 - Al pausar con la barra espaciadora pulsada, ordena a `armamento` cancelar el apuntado.
+- **Consultar:** pantalla actual, opción seleccionada y cuántas veces ha tocado cada sonido de menú (mover, confirmar, error), que `audio` usa para sonar.
 
 ## Eventos
 - Publica: PartidaIniciada, PartidaAbandonada, PausaCambiada, TerminarDescansoSolicitado.

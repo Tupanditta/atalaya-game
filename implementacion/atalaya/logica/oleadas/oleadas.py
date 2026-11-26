@@ -1,9 +1,9 @@
 """Oleadas: aparición, cronómetro y fin de cada oleada (`modulos/oleadas.md`).
 
-Versión de S4: composición completa de cada oleada, con tamaños y tipos mezclados
+Versión de S5: composición completa de cada oleada, con tamaños y tipos mezclados
 (RN-06, RN-16), aparición con su ritmo y el máximo de enemigos activos (RN-43),
-cronómetro y fin de oleada (RN-15). Al superar una oleada empieza directamente la
-siguiente; el descanso llega en S5.
+cronómetro y fin de oleada (RN-15), y descanso entre oleadas con su cuenta atrás y su
+fin anticipado (RN-18, RF-44).
 """
 
 from dataclasses import dataclass
@@ -12,6 +12,8 @@ from atalaya.logica.nucleo.azar import Azar
 from atalaya.logica.nucleo.bus import Bus
 from atalaya.logica.nucleo.dominio import Tamano, TipoEnemigo
 from atalaya.logica.nucleo.eventos import (
+    DescansoIniciado,
+    DescansoTerminado,
     EnemigoDestruido,
     EstacionDestruida,
     OleadaIniciada,
@@ -20,8 +22,12 @@ from atalaya.logica.nucleo.eventos import (
     PartidaGanada,
     PartidaIniciada,
     SolicitudAparicion,
+    TerminarDescansoSolicitado,
 )
 from atalaya.logica.parametros.modelo import Parametros
+
+#: Margen para que la suma de pasos en coma flotante no retrase un paso el fin del descanso.
+_TOLERANCIA_TIEMPO = 1e-9
 
 
 @dataclass(frozen=True, slots=True)
@@ -78,8 +84,11 @@ class Oleadas:
         self._desde_aparicion = 0.0
         self._cronometro = 0.0
         self._cronometro_en_marcha = False
+        self._en_descanso = False
+        self._descanso = 0.0
         bus.suscribir(PartidaIniciada, self._al_iniciar_partida)
         bus.suscribir(EnemigoDestruido, self._al_destruir_enemigo)
+        bus.suscribir(TerminarDescansoSolicitado, self._al_pedir_fin_descanso)
         bus.suscribir(PartidaAbandonada, self._al_detener)
         bus.suscribir(EstacionDestruida, self._al_detener)
 
@@ -90,6 +99,8 @@ class Oleadas:
         self._pendientes = componer_oleada(self._parametros, numero, self._nivel, self._azar)
         self._numero = numero
         self._en_curso = True
+        self._en_descanso = False
+        self._descanso = 0.0
         self._enemigos = len(self._pendientes)
         self._activos = 0
         self._cronometro = 0.0
@@ -99,7 +110,16 @@ class Oleadas:
         self._bus.publicar(OleadaIniciada(numero, self._parametros.entorno_oleada(numero)))
 
     def actualizar(self, dt: float) -> None:
-        """Avanza el cronómetro y pide una aparición cada intervalo si hay hueco (RN-43)."""
+        """Avanza el cronómetro y pide una aparición cada intervalo si hay hueco (RN-43).
+
+        Durante el descanso solo descuenta su tiempo; al llegar a cero, empieza la
+        siguiente oleada (RN-18).
+        """
+        if self._en_descanso:
+            self._descanso -= dt
+            if self._descanso <= _TOLERANCIA_TIEMPO:
+                self._terminar_descanso()
+            return
         if not self._en_curso:
             return
         if self._cronometro_en_marcha:
@@ -151,6 +171,16 @@ class Oleadas:
         return self._activos + len(self._pendientes)
 
     @property
+    def en_descanso(self) -> bool:
+        """Indica si la partida está en el descanso entre dos oleadas (RN-18)."""
+        return self._en_descanso
+
+    @property
+    def tiempo_descanso(self) -> float:
+        """Segundos que le quedan al descanso; 0 fuera del descanso."""
+        return self._descanso
+
+    @property
     def cronometro(self) -> float:
         """Segundos desde que apareció el primer enemigo de la oleada actual."""
         return self._cronometro
@@ -176,11 +206,26 @@ class Oleadas:
             self._bus.publicar(PartidaGanada(self._nivel))
             return
         self._bus.publicar(OleadaSuperada(self._numero, self._cronometro, self._enemigos))
-        # Hasta S5 no hay descanso: la siguiente oleada empieza en el acto.
+        self._en_descanso = True
+        self._descanso = self._parametros.duracion_descanso(self._nivel)
+        self._bus.publicar(DescansoIniciado(self._descanso, self._numero + 1))
+
+    def _terminar_descanso(self) -> None:
+        """Cierra el descanso y empieza la siguiente oleada (RN-18, CU-07 paso 7)."""
+        self._en_descanso = False
+        self._descanso = 0.0
+        self._bus.publicar(DescansoTerminado())
         self.iniciar_oleada(self._numero + 1)
+
+    def _al_pedir_fin_descanso(self, evento: TerminarDescansoSolicitado) -> None:
+        """El jugador termina el descanso antes de tiempo (RF-44)."""
+        if self._en_descanso:
+            self._terminar_descanso()
 
     def _al_detener(self, evento: object) -> None:
         self._en_curso = False
+        self._en_descanso = False
+        self._descanso = 0.0
         self._cronometro_en_marcha = False
         self._pendientes = []
         self._activos = 0

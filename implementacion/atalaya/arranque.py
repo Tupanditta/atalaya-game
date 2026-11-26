@@ -10,6 +10,7 @@ from atalaya.logica.armamento import Armamento
 from atalaya.logica.enemigos import Enemigos
 from atalaya.logica.estacion import Estacion
 from atalaya.logica.flujo import Flujo
+from atalaya.logica.mejoras import Mejoras
 from atalaya.logica.nucleo import Etapa, Nucleo
 from atalaya.logica.oleadas import Oleadas
 from atalaya.logica.parametros import Parametros, cargar
@@ -30,6 +31,7 @@ class Juego:
     enemigos: Enemigos
     oleadas: Oleadas
     estacion: Estacion
+    mejoras: Mejoras
     radar: Radar
 
 
@@ -47,8 +49,9 @@ def montar(
     enemigos = Enemigos(nucleo.bus, parametros, nucleo.azar)
     oleadas = Oleadas(nucleo.bus, parametros, nucleo.azar)
     estacion = Estacion(nucleo.bus, parametros)
+    mejoras = Mejoras(nucleo.bus, parametros)
     radar = Radar(parametros, vista, enemigos)
-    flujo = Flujo(nucleo.bus, entrada, vista, armamento)
+    flujo = Flujo(nucleo.bus, entrada, vista, armamento, mejoras)
     nucleo.registrar(Etapa.ENTRADA, entrada)
     nucleo.registrar(Etapa.FLUJO, flujo)
     nucleo.registrar(Etapa.VISTA, vista)
@@ -56,7 +59,9 @@ def montar(
     nucleo.registrar(Etapa.ENEMIGOS, enemigos)
     nucleo.registrar(Etapa.OLEADAS, oleadas)
     nucleo.registrar(Etapa.ESTACION, estacion)
-    return Juego(nucleo, entrada, flujo, vista, armamento, enemigos, oleadas, estacion, radar)
+    return Juego(
+        nucleo, entrada, flujo, vista, armamento, enemigos, oleadas, estacion, mejoras, radar
+    )
 
 
 def main() -> None:
@@ -83,9 +88,10 @@ def main() -> None:
         juego.radar,
         juego.estacion,
         juego.oleadas,
+        juego.mejoras,
         juego.flujo,
     )
-    Audio(base, juego.nucleo.bus, parametros)
+    audio = Audio(base, juego.nucleo.bus, parametros, juego.flujo)
     reloj = ClockObject.get_global_clock()
 
     def fotograma(tarea: Task.Task) -> int:
@@ -96,6 +102,7 @@ def main() -> None:
         # En pausa no avanza la orientación: se dibuja el último paso, sin interpolar.
         escena.dibujar(1.0 if nucleo.en_pausa else nucleo.fraccion_paso, reloj.get_dt())
         hud.dibujar(reloj.get_dt())
+        audio.actualizar()
         return Task.cont
 
     juego.flujo.iniciar_partida(nivel=1)

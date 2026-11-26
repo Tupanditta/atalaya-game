@@ -136,4 +136,8 @@ def test_s3_t19_jugador_automatico_supera_cinco_oleadas(parametros: Parametros) 
     assert destruidas == []
     assert [s.numero for s in superadas] == [1, 2, 3, 4, 5]
     assert juego.estacion.integridad > 0
-    assert juego.oleadas.numero == 6
+    # Tras la quinta oleada empieza su descanso, con la pantalla de mejoras (S5).
+    juego.nucleo.avanzar(PASO)
+    assert juego.oleadas.numero == 5
+    assert juego.oleadas.en_descanso
+    assert juego.flujo.pantalla is Pantalla.DESCANSO

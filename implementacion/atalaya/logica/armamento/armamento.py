@@ -1,14 +1,14 @@
 """Energía, mira de precisión y disparo (`modulos/armamento.md`).
 
 El disparo sale justo hacia el centro de la mira, sin dispersión (RN-37). Incluye el
-bloqueo del disparo por aturdimiento (RN-13, RN-38). Las mejoras de batería y generador
-llegan en S5.
+bloqueo del disparo por aturdimiento (RN-13, RN-38) y las mejoras de batería y
+generador que compra el jugador en el descanso (RN-47).
 """
 
 from typing import Protocol
 
 from atalaya.logica.nucleo.bus import Bus
-from atalaya.logica.nucleo.dominio import Vector3
+from atalaya.logica.nucleo.dominio import Mejora, Vector3
 from atalaya.logica.nucleo.eventos import (
     ApuntadoCambiado,
     AturdimientoIniciado,
@@ -16,6 +16,7 @@ from atalaya.logica.nucleo.eventos import (
     DisparoRealizado,
     DisparoSinEnergia,
     EnergiaCambiada,
+    MejoraAplicada,
     PartidaIniciada,
 )
 from atalaya.logica.nucleo.vectores import CERO
@@ -39,8 +40,11 @@ class Armamento:
     def __init__(self, bus: Bus, parametros: Parametros, mira: Mira) -> None:
         self._bus = bus
         self._jugador = parametros.jugador
+        self._mejoras = parametros.mejoras
         self._mira = mira
-        self._energia = self._jugador.energia_maxima
+        self._energia_maxima = self._jugador.energia_maxima
+        self._recarga = self._jugador.recarga_energia
+        self._energia = self._energia_maxima
         self._progreso = 0.0
         self._pulsada = False
         self._pulsada_antes = False
@@ -48,6 +52,7 @@ class Armamento:
         self._aturdido = False
         bus.suscribir(AturdimientoIniciado, self._al_aturdir)
         bus.suscribir(AturdimientoTerminado, self._al_terminar_aturdimiento)
+        bus.suscribir(MejoraAplicada, self._al_mejorar)
         bus.suscribir(PartidaIniciada, self._al_iniciar_partida)
 
     # --- operaciones -----------------------------------------------------------------
@@ -87,8 +92,13 @@ class Armamento:
 
     @property
     def energia_maxima(self) -> float:
-        """Energía máxima."""
-        return self._jugador.energia_maxima
+        """Energía máxima, con la mejora de batería."""
+        return self._energia_maxima
+
+    @property
+    def recarga_energia(self) -> float:
+        """Energía recargada por segundo, con la mejora de generador."""
+        return self._recarga
 
     @property
     def progreso_apuntado(self) -> float:
@@ -109,10 +119,10 @@ class Armamento:
     # --- internos --------------------------------------------------------------------
 
     def _recargar(self, dt: float) -> None:
-        maxima = self._jugador.energia_maxima
+        maxima = self._energia_maxima
         if self._energia >= maxima:
             return
-        self._cambiar_energia(min(maxima, self._energia + self._jugador.recarga_energia * dt))
+        self._cambiar_energia(min(maxima, self._energia + self._recarga * dt))
 
     def _disparar(self) -> None:
         coste = self._jugador.coste_disparo
@@ -140,7 +150,7 @@ class Armamento:
     def _cambiar_energia(self, energia: float) -> None:
         if energia != self._energia:
             self._energia = energia
-            self._bus.publicar(EnergiaCambiada(energia, self._jugador.energia_maxima))
+            self._bus.publicar(EnergiaCambiada(energia, self._energia_maxima))
 
     def _al_aturdir(self, evento: AturdimientoIniciado) -> None:
         """La mira vuelve a su tamaño normal y no se dispara al soltar (RN-13, RN-38)."""
@@ -150,11 +160,27 @@ class Armamento:
     def _al_terminar_aturdimiento(self, evento: AturdimientoTerminado) -> None:
         self._aturdido = False
 
+    def _al_mejorar(self, evento: MejoraAplicada) -> None:
+        """La batería sube la energía máxima y el generador la recarga (RN-47).
+
+        La energía actual no cambia: la recarga la lleva hasta la nueva máxima.
+        """
+        if evento.mejora is Mejora.BATERIA:
+            efecto = self._mejoras.bateria.efecto
+            self._energia_maxima = self._jugador.energia_maxima + efecto * evento.nivel
+            self._bus.publicar(EnergiaCambiada(self._energia, self._energia_maxima))
+        elif evento.mejora is Mejora.GENERADOR:
+            efecto = self._mejoras.generador.efecto
+            self._recarga = self._jugador.recarga_energia + efecto * evento.nivel
+
     def _al_iniciar_partida(self, evento: PartidaIniciada) -> None:
+        """Energía al máximo base y sin mejoras (RN-02, RN-49)."""
         self._aturdido = False
-        self._energia = self._jugador.energia_maxima
+        self._energia_maxima = self._jugador.energia_maxima
+        self._recarga = self._jugador.recarga_energia
+        self._energia = self._energia_maxima
         self._progreso = 0.0
         self._pulsada = False
         self._pulsada_antes = False
         self._cancelado = False
-        self._bus.publicar(EnergiaCambiada(self._energia, self._jugador.energia_maxima))
+        self._bus.publicar(EnergiaCambiada(self._energia, self._energia_maxima))

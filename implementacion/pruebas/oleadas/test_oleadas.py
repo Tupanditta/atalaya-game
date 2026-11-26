@@ -17,6 +17,7 @@ from atalaya.logica.nucleo.eventos import (
     PartidaGanada,
     PartidaIniciada,
     SolicitudAparicion,
+    TerminarDescansoSolicitado,
 )
 from atalaya.logica.nucleo.vectores import CERO, normalizar
 from atalaya.logica.oleadas import Oleadas, componer_oleada
@@ -172,7 +173,8 @@ def _destruir_todos(partida: Partida, segundos_maximos: float = 60) -> None:
 
 
 def test_s3_t17_rn15_fin_de_oleada(parametros: Parametros) -> None:
-    """S3-T17 RN-15: destruir los 3 enemigos de la oleada 1 la supera y empieza la 2."""
+    """S3-T17 RN-15: destruir los 3 enemigos de la oleada 1 la supera y, tras el descanso
+    (S5), empieza la 2."""
     partida = Partida(parametros)
     eventos: list[object] = []
     partida.nucleo.bus.suscribir(OleadaSuperada, eventos.append)
@@ -209,9 +211,14 @@ def test_s3_t18_cronometro(parametros: Parametros) -> None:
     partida.destruir_uno()
     (superada,) = superadas
     assert superada.tiempo == pytest.approx(20, abs=PASO + 1e-9)
+    # Durante el descanso el cronómetro no corre (S5).
+    partida.avanzar(1)
+    assert partida.oleadas.en_descanso
+    assert partida.oleadas.cronometro == pytest.approx(superada.tiempo)
     # La oleada siguiente empieza con el cronómetro parado hasta su primera aparición.
-    assert partida.oleadas.cronometro == 0
-    partida.avanzar(PASO)
+    partida.nucleo.bus.publicar(TerminarDescansoSolicitado())
+    partida.nucleo.bus.entregar()
+    assert partida.oleadas.numero == 2
     assert partida.oleadas.cronometro == 0
 
 

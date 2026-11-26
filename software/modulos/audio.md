@@ -19,7 +19,7 @@ Reproducir los efectos de sonido, el sonido posicional de los enemigos, la radio
   - alarma de daño (RF-14),
   - aturdimiento,
   - sonido de radio al empezar una transmisión,
-  - sonidos de los menús: mover, confirmar, error.
+  - sonidos de los menús: mover, confirmar, error. Suenan cuando `flujo` indica que el jugador ha movido la selección, ha elegido una opción o ha elegido una opción no disponible.
 - **Música (RF-18):** tres pistas.
   - Calma: menús y descansos.
   - Combate: oleada en curso.
@@ -44,7 +44,7 @@ Reproducir los efectos de sonido, el sonido posicional de los enemigos, la radio
   - TransmisionDisponible, PartidaIniciada, PartidaAbandonada.
 
 ## Depende de
-El motor de audio; vista y enemigos (solo lectura).
+El motor de audio; vista, enemigos y flujo (solo lectura).
 
 ## No hace
 - No decide cuándo ocurre nada: solo reacciona a eventos.

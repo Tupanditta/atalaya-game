@@ -4,6 +4,7 @@ import pytest
 
 from atalaya.logica.armamento import Armamento
 from atalaya.logica.flujo import Flujo, Pantalla
+from atalaya.logica.mejoras import Mejoras
 from atalaya.logica.nucleo import PASO, Etapa, Nucleo
 from atalaya.logica.nucleo.dominio import Accion, Vector3
 from atalaya.logica.nucleo.eventos import DisparoRealizado, EstacionDestruida, PartidaIniciada
@@ -34,7 +35,7 @@ class AccionesFalsas:
 
 def _flujo(nucleo: Nucleo, parametros: Parametros, acciones: AccionesFalsas, vista: Vista) -> Flujo:
     armamento = Armamento(nucleo.bus, parametros, vista)
-    return Flujo(nucleo.bus, acciones, vista, armamento)
+    return Flujo(nucleo.bus, acciones, vista, armamento, Mejoras(nucleo.bus, parametros))
 
 
 def _montar(parametros: Parametros) -> tuple[Nucleo, Flujo, Vista, AccionesFalsas]:
@@ -131,7 +132,7 @@ def test_barra_espaciadora_llega_a_armamento(parametros: Parametros) -> None:
     acciones = AccionesFalsas()
     vista = Vista(nucleo.bus, parametros)
     armamento = Armamento(nucleo.bus, parametros, vista)
-    flujo = Flujo(nucleo.bus, acciones, vista, armamento)
+    flujo = Flujo(nucleo.bus, acciones, vista, armamento, Mejoras(nucleo.bus, parametros))
     nucleo.registrar(Etapa.FLUJO, flujo)
     nucleo.registrar(Etapa.ARMAMENTO, armamento)
     flujo.iniciar_partida()
@@ -150,7 +151,7 @@ def _montar_con_armamento(
     acciones = AccionesFalsas()
     vista = Vista(nucleo.bus, parametros)
     armamento = Armamento(nucleo.bus, parametros, vista)
-    flujo = Flujo(nucleo.bus, acciones, vista, armamento)
+    flujo = Flujo(nucleo.bus, acciones, vista, armamento, Mejoras(nucleo.bus, parametros))
     nucleo.registrar(Etapa.FLUJO, flujo)
     nucleo.registrar(Etapa.VISTA, vista)
     nucleo.registrar(Etapa.ARMAMENTO, armamento)

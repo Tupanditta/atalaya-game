@@ -1,11 +1,11 @@
 """Integridad de la estación y efectos de los ataques enemigos (`modulos/estacion.md`).
 
-Versión de S4: integridad, destrucción, desestabilización y aturdimiento. La reparación
-y el blindaje llegan en S5.
+Versión de S5: integridad, destrucción, desestabilización y aturdimiento, más la
+reparación (RN-46) y el blindaje (RN-47) que compra el jugador en el descanso.
 """
 
 from atalaya.logica.nucleo.bus import Bus
-from atalaya.logica.nucleo.dominio import TipoEnemigo
+from atalaya.logica.nucleo.dominio import Mejora, TipoEnemigo
 from atalaya.logica.nucleo.eventos import (
     AturdimientoIniciado,
     AturdimientoTerminado,
@@ -14,9 +14,11 @@ from atalaya.logica.nucleo.eventos import (
     EstacionDanada,
     EstacionDestruida,
     IntegridadCambiada,
+    MejoraAplicada,
     OleadaSuperada,
     PartidaIniciada,
     ProyectilImpacta,
+    ReparacionAplicada,
 )
 from atalaya.logica.parametros.modelo import Parametros
 
@@ -41,6 +43,8 @@ class Estacion:
         self._desestabilizacion = 0.0
         bus.suscribir(ProyectilImpacta, self._al_impactar)
         bus.suscribir(OleadaSuperada, self._al_superar_oleada)
+        bus.suscribir(ReparacionAplicada, self._al_reparar)
+        bus.suscribir(MejoraAplicada, self._al_mejorar)
         bus.suscribir(PartidaIniciada, self._al_iniciar_partida)
 
     # --- operaciones -----------------------------------------------------------------
@@ -128,6 +132,23 @@ class Estacion:
         elif tipo is TipoEnemigo.ATURDIDOR:
             self._aturdimiento = duracion
             self._bus.publicar(AturdimientoIniciado(duracion))
+
+    def _al_reparar(self, evento: ReparacionAplicada) -> None:
+        """Suma la reparación sin superar la integridad máxima (RN-46)."""
+        if self._destruida:
+            return
+        self._integridad = min(self._maxima, self._integridad + evento.cantidad)
+        self._bus.publicar(IntegridadCambiada(self._integridad, self._maxima))
+
+    def _al_mejorar(self, evento: MejoraAplicada) -> None:
+        """El blindaje sube la integridad máxima y la actual con cada nivel (RN-47)."""
+        if evento.mejora is not Mejora.BLINDAJE or self._destruida:
+            return
+        efecto = self._parametros.mejoras.blindaje.efecto
+        maxima = self._parametros.jugador.integridad_maxima + efecto * evento.nivel
+        self._integridad += maxima - self._maxima
+        self._maxima = maxima
+        self._bus.publicar(IntegridadCambiada(self._integridad, self._maxima))
 
     def _al_superar_oleada(self, evento: OleadaSuperada) -> None:
         self._oleadas_superadas = evento.numero
