@@ -1,0 +1,68 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1920" height="1080" viewBox="0 0 1920 1080">
+  <title>Atalaya · Apuntando con la mira al mínimo y zoom máximo</title>
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="45%" r="75%"><stop offset="0" stop-color="#112244"/><stop offset="1" stop-color="#03060D"/></radialGradient>
+    <filter id="nebula" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="90"/></filter>
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+  </defs>
+  <style>
+    .f{font-family:Rajdhani,'Segoe UI',sans-serif}
+    .i{font-family:Inter,'Segoe UI',sans-serif}
+    .p{fill:#0A1220;fill-opacity:.78;stroke:#2AD4FF;stroke-opacity:.35}
+    .tx{fill:#E6F1FF}.ts{fill:#8AA0B8}.ta{fill:#2AD4FF}
+    .lbl{font-size:16px;letter-spacing:3px;font-weight:600}
+  </style>
+
+  <!-- Escena ampliada por el zoom -->
+  <rect width="1920" height="1080" fill="url(#bg)"/>
+  <ellipse cx="1500" cy="200" rx="700" ry="380" fill="#6B3FD6" opacity=".25" filter="url(#nebula)"/>
+  <g fill="#E6F1FF">
+    <circle cx="300" cy="200" r="2.2"/><circle cx="820" cy="140" r="1.6"/><circle cx="1400" cy="320" r="2"/>
+    <circle cx="1700" cy="760" r="1.8"/><circle cx="560" cy="820" r="2.4"/><circle cx="1180" cy="900" r="1.6"/>
+  </g>
+  <!-- Enemigo pequeño lejano, visto con zoom -->
+  <g transform="translate(978 528) scale(1.6)" filter="url(#glow)">
+    <polygon points="0,-12 16,0 0,12 -16,0" fill="#1B2233" stroke="#FF4D5E" stroke-width="1.5"/>
+    <circle r="3" fill="#FF4D5E"/>
+  </g>
+
+  <!-- Mira al mínimo (radio 21 px), en color acento -->
+  <g stroke="#2AD4FF" stroke-width="2" fill="none" filter="url(#glow)">
+    <circle cx="960" cy="540" r="21"/>
+    <line x1="960" y1="511" x2="960" y2="501"/><line x1="960" y1="569" x2="960" y2="579"/>
+    <line x1="931" y1="540" x2="921" y2="540"/><line x1="989" y1="540" x2="999" y2="540"/>
+  </g>
+  <circle cx="960" cy="540" r="3" fill="#2AD4FF"/>
+
+  <!-- Oleada -->
+  <path d="M792 32 H1140 V100 L1128 112 H780 V44 Z" class="p"/>
+  <text x="960" y="72" text-anchor="middle" class="f tx" font-size="30" font-weight="600" letter-spacing="2">OLEADA 12 / 50</text>
+  <text x="960" y="98" text-anchor="middle" class="f ts lbl">7 ENEMIGOS RESTANTES</text>
+
+  <!-- Radar con el sector de visión estrechado por el zoom (25°) -->
+  <text x="60" y="702" class="f ts lbl">RADAR</text>
+  <circle cx="210" cy="870" r="150" fill="#0A1220" fill-opacity=".78" stroke="#2AD4FF" stroke-opacity=".35"/>
+  <path d="M210 870 L178 724 A150 150 0 0 1 242 724 Z" fill="#2AD4FF" fill-opacity=".14"/>
+  <circle cx="210" cy="870" r="50" fill="none" stroke="#2AD4FF" stroke-opacity=".2"/>
+  <circle cx="210" cy="870" r="100" fill="none" stroke="#2AD4FF" stroke-opacity=".2"/>
+  <g stroke="#2AD4FF" stroke-width="2"><line x1="205" y1="870" x2="215" y2="870"/><line x1="210" y1="865" x2="210" y2="875"/></g>
+  <circle cx="213" cy="742" r="4" fill="#FF4D5E" stroke="#E6F1FF" stroke-width="1"/>
+  <g opacity=".7">
+    <polygon points="160,780 165,788 155,788" fill="#FFD23F"/>
+    <polygon points="330,890 338,898 330,906 322,898" fill="#B36BFF"/>
+    <circle cx="96" cy="846" r="8" fill="#FF4D5E"/>
+  </g>
+
+  <!-- Estado de la estación -->
+  <text x="1872" y="898" text-anchor="end" class="f ta lbl">NIVEL 3</text>
+  <path d="M1452 912 H1872 V1020 L1860 1032 H1440 V924 Z" class="p"/>
+  <text x="1464" y="946" class="f ts lbl">INTEGRIDAD</text>
+  <text x="1848" y="946" text-anchor="end" class="f tx" font-size="20" font-weight="600">82 / 100</text>
+  <rect x="1464" y="956" width="384" height="10" fill="#1A2638"/>
+  <rect x="1464" y="956" width="315" height="10" fill="#3DDC84"/>
+  <text x="1464" y="996" class="f ts lbl">ENERGÍA</text>
+  <text x="1848" y="996" text-anchor="end" class="f tx" font-size="20" font-weight="600">70 / 100</text>
+  <rect x="1464" y="1006" width="384" height="10" fill="#1A2638"/>
+  <rect x="1464" y="1006" width="269" height="10" fill="#2AD4FF"/>
+</svg>

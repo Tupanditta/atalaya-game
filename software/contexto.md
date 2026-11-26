@@ -26,6 +26,7 @@ La historia se cuenta de forma ligera: mensajes de radio, transmisiones entre ol
 - **Girar la vista.** Las flechas del teclado giran la vista del jugador.
 - **Apuntar.** La mira está fija en el centro de la pantalla. Para apuntar, el jugador gira la vista con las flechas.
 - **Disparar.** Una tecla dispara hacia la mira. El juego se controla solo con el teclado.
+- **Apuntar con precisión.** Mantener pulsada la tecla de disparo reduce la mira hasta un tamaño mínimo y acerca la imagen para ver más lejos. Cuanto más pequeña es la mira, más preciso es el disparo. El disparo sale al soltar la tecla.
 - **Energía limitada.** Cada disparo consume energía. La energía se recarga sola con el tiempo. Si la barra está vacía, el jugador no puede disparar hasta que se recargue.
 
 ## Elementos de la interfaz
@@ -37,7 +38,10 @@ La historia se cuenta de forma ligera: mensajes de radio, transmisiones entre ol
 
 ## Enemigos y progresión
 
-- Los enemigos llegan en oleadas, desde distintas direcciones.
+- Los enemigos llegan en oleadas, desde distintas direcciones. Siempre aparecen lejos, nunca encima del jugador.
+- Se mueven en todas direcciones mientras se acercan, y pueden acercarse y alejarse. Seguirlos puede exigir giros altos o diagonales.
+- No chocan con la estación: la atacan disparando.
+- Se mueven con inercia, en curvas, sin cambios bruscos. Avisan antes de disparar, y sus proyectiles se ven venir.
 - La dificultad aumenta a medida que avanza la partida.
 
 ### Tamaño, vida y velocidad
@@ -49,7 +53,15 @@ Los enemigos se diferencian por su tamaño, y el tamaño marca su vida y su velo
 
 ### Visibilidad
 
-No todos los enemigos se ven igual de bien. Algunos son más difíciles de distinguir contra el fondo o de seguir con la vista. El jugador tiene que apoyarse en el radar y en el sonido para encontrarlos.
+Algunas oleadas se juegan en un entorno de poca visibilidad: niebla de polvo cósmico o destellos de una estrella cercana. En esos momentos el jugador tiene que apoyarse en el radar y en el sonido para encontrar a los enemigos.
+
+### Mejoras entre oleadas
+
+Entre oleadas se abre una pantalla sencilla para reparar y mejorar la estación. Cuanto más rápido acaba el jugador con una oleada, más puntos tiene para gastar. Durante las oleadas no se puede reparar ni mejorar.
+
+### Menús
+
+Un menú principal permite jugar, consultar el manual o salir. Durante la partida, Esc la pausa. El manual explica los controles, los enemigos y sus características, los entornos y las mejoras.
 
 ### Estabilidad de la pantalla
 

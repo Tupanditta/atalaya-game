@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1920" height="1080" viewBox="0 0 1920 1080">
+  <title>Atalaya · Selección de nivel</title>
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="45%" r="75%"><stop offset="0" stop-color="#0D1A35"/><stop offset="1" stop-color="#02040A"/></radialGradient>
+    <filter id="nebula" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="80"/></filter>
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="6" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+  </defs>
+  <style>
+    .f{font-family:Rajdhani,'Segoe UI',sans-serif}
+    .i{font-family:Inter,'Segoe UI',sans-serif}
+    .p{fill:#0A1220;fill-opacity:.78;stroke:#2AD4FF;stroke-opacity:.35}
+    .tx{fill:#E6F1FF}.ts{fill:#8AA0B8}.ta{fill:#2AD4FF}
+    .lbl{font-size:16px;letter-spacing:3px;font-weight:600}
+    .key{fill:none;stroke:#8AA0B8;stroke-width:1}
+  </style>
+
+  <rect width="1920" height="1080" fill="url(#bg)"/>
+  <ellipse cx="1420" cy="300" rx="420" ry="260" fill="#6B3FD6" opacity=".22" filter="url(#nebula)"/>
+  <ellipse cx="500" cy="800" rx="380" ry="220" fill="#2AD4FF" opacity=".12" filter="url(#nebula)"/>
+  <g fill="#E6F1FF">
+    <circle cx="120" cy="90" r="1.2"/><circle cx="340" cy="210" r="0.9"/><circle cx="610" cy="120" r="1.5"/><circle cx="880" cy="60" r="1"/>
+    <circle cx="1040" cy="240" r="1.3"/><circle cx="1260" cy="110" r="0.8"/><circle cx="1500" cy="70" r="1.4"/><circle cx="1780" cy="180" r="1"/>
+    <circle cx="1860" cy="420" r="1.2"/><circle cx="1180" cy="860" r="0.9"/><circle cx="760" cy="880" r="1.4"/><circle cx="420" cy="980" r="1"/>
+  </g>
+  <rect width="1920" height="1080" fill="#000" opacity=".35"/>
+
+  <path d="M612 320 H1320 V748 L1308 760 H600 V332 Z" class="p"/>
+  <text x="960" y="392" text-anchor="middle" class="f tx" font-size="48" font-weight="700" letter-spacing="6">NIVEL DE DIFICULTAD</text>
+  <line x1="648" y1="420" x2="1272" y2="420" stroke="#2AD4FF" stroke-opacity=".25"/>
+
+  <text x="820" y="545" text-anchor="middle" class="f ta" font-size="80" font-weight="600">‹</text>
+  <text x="960" y="555" text-anchor="middle" class="f tx" font-size="96" font-weight="700" filter="url(#glow)">3</text>
+  <text x="1100" y="545" text-anchor="middle" class="f ts" font-size="80" font-weight="600" opacity=".4">›</text>
+
+  <g class="i" font-size="20">
+    <text x="760" y="620" class="ts">Resistencia de los enemigos</text><text x="1160" y="620" text-anchor="end" class="tx">×1,50</text>
+    <text x="760" y="656" class="ts">Descanso entre oleadas</text><text x="1160" y="656" text-anchor="end" class="tx">15,8 s</text>
+    <text x="760" y="692" class="ts">Nivel más alto desbloqueado</text><text x="1160" y="692" text-anchor="end" class="tx">3</text>
+  </g>
+
+  <g class="i" font-size="16" font-weight="500">
+    <rect x="690" y="1008" width="40" height="30" rx="4" class="key"/><text x="710" y="1029" text-anchor="middle" class="ts">←→</text>
+    <text x="740" y="1029" class="ts">Cambiar nivel</text>
+    <text x="852" y="1029" class="ts">·</text>
+    <rect x="872" y="1008" width="56" height="30" rx="4" class="key"/><text x="900" y="1029" text-anchor="middle" class="ts">Intro</text>
+    <text x="938" y="1029" class="ts">Empezar</text>
+    <text x="1012" y="1029" class="ts">·</text>
+    <rect x="1032" y="1008" width="44" height="30" rx="4" class="key"/><text x="1054" y="1029" text-anchor="middle" class="ts">Esc</text>
+    <text x="1086" y="1029" class="ts">Volver</text>
+  </g>
+</svg>

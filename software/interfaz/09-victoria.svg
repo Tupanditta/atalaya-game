@@ -1,0 +1,52 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1920" height="1080" viewBox="0 0 1920 1080">
+  <title>Atalaya · Resumen de victoria</title>
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="45%" r="75%"><stop offset="0" stop-color="#0D1A35"/><stop offset="1" stop-color="#02040A"/></radialGradient>
+    <filter id="nebula" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="80"/></filter>
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="10" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+  </defs>
+  <style>
+    .f{font-family:Rajdhani,'Segoe UI',sans-serif}
+    .i{font-family:Inter,'Segoe UI',sans-serif}
+    .tx{fill:#E6F1FF}.ts{fill:#8AA0B8}.ta{fill:#2AD4FF}
+    .lbl{font-size:16px;letter-spacing:3px;font-weight:600}
+    .opt{font-size:32px;font-weight:600;letter-spacing:3px}
+    .key{fill:none;stroke:#8AA0B8;stroke-width:1}
+  </style>
+
+  <rect width="1920" height="1080" fill="url(#bg)"/>
+  <ellipse cx="960" cy="320" rx="560" ry="220" fill="#2AD4FF" opacity=".16" filter="url(#nebula)"/>
+  <g fill="#E6F1FF">
+    <circle cx="120" cy="90" r="1.2"/><circle cx="610" cy="120" r="1.5"/><circle cx="1260" cy="110" r="0.8"/><circle cx="1780" cy="180" r="1"/>
+    <circle cx="1860" cy="720" r="1.2"/><circle cx="200" cy="860" r="1.3"/><circle cx="1500" cy="960" r="1.1"/>
+  </g>
+  <rect width="1920" height="1080" fill="#000" opacity=".4"/>
+
+  <text x="960" y="330" text-anchor="middle" class="f ta" font-size="96" font-weight="700" letter-spacing="16" filter="url(#glow)">VICTORIA</text>
+  <text x="960" y="392" text-anchor="middle" class="i tx" font-size="24">La ruta hacia las colonias sigue abierta.</text>
+
+  <g text-anchor="middle">
+    <text x="720" y="468" class="f ts lbl">OLEADAS SUPERADAS</text>
+    <text x="720" y="510" class="f tx" font-size="36" font-weight="700">50 / 50</text>
+    <text x="960" y="468" class="f ts lbl">NIVEL</text>
+    <text x="960" y="510" class="f tx" font-size="36" font-weight="700">3</text>
+    <text x="1200" y="468" class="f ts lbl">DESBLOQUEADO</text>
+    <text x="1200" y="510" class="f ta" font-size="36" font-weight="700">NIVEL 4</text>
+  </g>
+
+  <rect x="720" y="580" width="480" height="64" fill="#2AD4FF" fill-opacity=".14"/>
+  <rect x="720" y="580" width="4" height="64" fill="#2AD4FF"/>
+  <text x="748" y="623" class="f tx opt">SUBIR A NIVEL 4</text>
+  <text x="1172" y="623" class="f ta opt">›</text>
+  <text x="748" y="703" class="f ts opt">VOLVER A JUGAR (NIVEL 3)</text>
+  <text x="748" y="783" class="f ts opt">MENÚ PRINCIPAL</text>
+
+  <g class="i" font-size="16" font-weight="500">
+    <rect x="806" y="1008" width="40" height="30" rx="4" class="key"/><text x="826" y="1029" text-anchor="middle" class="ts">↑↓</text>
+    <text x="856" y="1029" class="ts">Navegar</text>
+    <text x="932" y="1029" class="ts">·</text>
+    <rect x="952" y="1008" width="56" height="30" rx="4" class="key"/><text x="980" y="1029" text-anchor="middle" class="ts">Intro</text>
+    <text x="1018" y="1029" class="ts">Confirmar</text>
+  </g>
+</svg>

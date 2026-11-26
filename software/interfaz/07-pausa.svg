@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1920" height="1080" viewBox="0 0 1920 1080">
+  <title>Atalaya · Pausa con confirmación de abandono</title>
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="45%" r="75%"><stop offset="0" stop-color="#0D1A35"/><stop offset="1" stop-color="#02040A"/></radialGradient>
+  </defs>
+  <style>
+    .f{font-family:Rajdhani,'Segoe UI',sans-serif}
+    .i{font-family:Inter,'Segoe UI',sans-serif}
+    .p{fill:#0A1220;fill-opacity:.9;stroke:#2AD4FF;stroke-opacity:.35}
+    .tx{fill:#E6F1FF}.ts{fill:#8AA0B8}.ta{fill:#2AD4FF}
+    .lbl{font-size:16px;letter-spacing:3px;font-weight:600}
+    .opt{font-size:32px;font-weight:600;letter-spacing:3px}
+    .key{fill:none;stroke:#8AA0B8;stroke-width:1}
+  </style>
+
+  <!-- Escena congelada con el HUD, oscurecida -->
+  <rect width="1920" height="1080" fill="url(#bg)"/>
+  <g opacity=".6">
+    <circle cx="210" cy="870" r="150" fill="#0A1220" stroke="#2AD4FF" stroke-opacity=".35"/>
+    <path d="M1452 912 H1872 V1020 L1860 1032 H1440 V924 Z" fill="#0A1220" stroke="#2AD4FF" stroke-opacity=".35"/>
+    <path d="M792 32 H1140 V100 L1128 112 H780 V44 Z" fill="#0A1220" stroke="#2AD4FF" stroke-opacity=".35"/>
+    <circle cx="960" cy="540" r="40" fill="none" stroke="#E6F1FF" stroke-width="2"/>
+  </g>
+  <rect width="1920" height="1080" fill="#000" opacity=".55"/>
+
+  <!-- Menú de pausa -->
+  <path d="M692 250 H1240 V678 L1228 690 H680 V262 Z" class="p"/>
+  <text x="960" y="322" text-anchor="middle" class="f tx" font-size="48" font-weight="700" letter-spacing="6">PAUSA</text>
+  <text x="728" y="410" class="f ts opt">CONTINUAR</text>
+  <text x="728" y="482" class="f ts opt">MANUAL</text>
+  <rect x="704" y="508" width="512" height="64" fill="#2AD4FF" fill-opacity=".14"/>
+  <rect x="704" y="508" width="4" height="64" fill="#2AD4FF"/>
+  <text x="728" y="552" class="f tx opt">ABANDONAR PARTIDA</text>
+  <text x="728" y="626" class="f ts opt">SALIR DEL JUEGO</text>
+
+  <!-- Confirmación -->
+  <rect width="1920" height="1080" fill="#000" opacity=".35"/>
+  <path d="M652 600 H1280 V848 L1268 860 H640 V612 Z" class="p"/>
+  <text x="960" y="664" text-anchor="middle" class="f tx" font-size="36" font-weight="700" letter-spacing="4">¿ABANDONAR LA PARTIDA?</text>
+  <text x="960" y="704" text-anchor="middle" class="i ts" font-size="20">Se perderán los puntos y las mejoras de esta partida.</text>
+  <rect x="676" y="756" width="276" height="64" fill="#2AD4FF" fill-opacity=".14" stroke="#2AD4FF"/>
+  <text x="814" y="799" text-anchor="middle" class="f tx opt">NO</text>
+  <rect x="968" y="756" width="276" height="64" fill="none" stroke="#8AA0B8" stroke-opacity=".4"/>
+  <text x="1106" y="799" text-anchor="middle" class="f ts opt">SÍ</text>
+
+  <g class="i" font-size="16" font-weight="500">
+    <rect x="720" y="1008" width="40" height="30" rx="4" class="key"/><text x="740" y="1029" text-anchor="middle" class="ts">←→</text>
+    <text x="770" y="1029" class="ts">Elegir</text>
+    <text x="830" y="1029" class="ts">·</text>
+    <rect x="850" y="1008" width="56" height="30" rx="4" class="key"/><text x="878" y="1029" text-anchor="middle" class="ts">Intro</text>
+    <text x="916" y="1029" class="ts">Confirmar</text>
+    <text x="1004" y="1029" class="ts">·</text>
+    <rect x="1024" y="1008" width="44" height="30" rx="4" class="key"/><text x="1046" y="1029" text-anchor="middle" class="ts">Esc</text>
+    <text x="1078" y="1029" class="ts">Cancelar</text>
+  </g>
+</svg>

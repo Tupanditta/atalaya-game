@@ -1,0 +1,71 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1920" height="1080" viewBox="0 0 1920 1080">
+  <title>Atalaya · Jugador aturdido y sin energía</title>
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="45%" r="75%"><stop offset="0" stop-color="#0D1A35"/><stop offset="1" stop-color="#02040A"/></radialGradient>
+    <radialGradient id="vig" cx="50%" cy="50%" r="72%"><stop offset=".55" stop-color="#B36BFF" stop-opacity="0"/><stop offset="1" stop-color="#B36BFF" stop-opacity=".32"/></radialGradient>
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="4" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+  </defs>
+  <style>
+    .f{font-family:Rajdhani,'Segoe UI',sans-serif}
+    .i{font-family:Inter,'Segoe UI',sans-serif}
+    .p{fill:#0A1220;fill-opacity:.78;stroke:#2AD4FF;stroke-opacity:.35}
+    .tx{fill:#E6F1FF}.ts{fill:#8AA0B8}.ta{fill:#2AD4FF}
+    .lbl{font-size:16px;letter-spacing:3px;font-weight:600}
+  </style>
+
+  <rect width="1920" height="1080" fill="url(#bg)"/>
+  <g fill="#E6F1FF">
+    <circle cx="120" cy="90" r="1.2"/><circle cx="610" cy="120" r="1.5"/><circle cx="1040" cy="240" r="1.3"/><circle cx="1500" cy="70" r="1.4"/>
+    <circle cx="1860" cy="420" r="1.2"/><circle cx="980" cy="640" r="1.1"/><circle cx="760" cy="880" r="1.4"/><circle cx="1350" cy="980" r="1.2"/>
+  </g>
+  <!-- Aturdidor grande -->
+  <g transform="translate(1320 600)" filter="url(#glow)">
+    <polygon points="0,-30 30,0 0,30 -30,0" fill="#1B2233" stroke="#B36BFF" stroke-width="2.5"/>
+    <circle r="6" fill="#B36BFF"/>
+  </g>
+
+  <!-- Viñeta de aturdimiento -->
+  <rect width="1920" height="1080" fill="url(#vig)"/>
+
+  <!-- Mira bloqueada: discontinua y atenuada -->
+  <g stroke="#E6F1FF" stroke-width="2" fill="none" opacity=".4" stroke-dasharray="8 6">
+    <circle cx="960" cy="540" r="40"/>
+  </g>
+  <circle cx="960" cy="540" r="3" fill="#E6F1FF" opacity=".4"/>
+
+  <!-- Oleada -->
+  <path d="M792 32 H1140 V100 L1128 112 H780 V44 Z" class="p"/>
+  <text x="960" y="72" text-anchor="middle" class="f tx" font-size="30" font-weight="600" letter-spacing="2">OLEADA 12 / 50</text>
+  <text x="960" y="98" text-anchor="middle" class="f ts lbl">6 ENEMIGOS RESTANTES</text>
+
+  <!-- Cartel de aturdimiento -->
+  <path d="M712 128 H1220 V172 L1208 184 H700 V140 Z" fill="#0A1220" fill-opacity=".85" stroke="#B36BFF" stroke-width="1.5"/>
+  <text x="960" y="164" text-anchor="middle" class="f" fill="#B36BFF" font-size="24" font-weight="700" letter-spacing="4">SISTEMAS ATURDIDOS · 1,2 s</text>
+
+  <!-- Radar -->
+  <text x="60" y="702" class="f ts lbl">RADAR</text>
+  <circle cx="210" cy="870" r="150" fill="#0A1220" fill-opacity=".78" stroke="#2AD4FF" stroke-opacity=".35"/>
+  <path d="M210 870 L124 747 A150 150 0 0 1 296 747 Z" fill="#2AD4FF" fill-opacity=".10"/>
+  <circle cx="210" cy="870" r="50" fill="none" stroke="#2AD4FF" stroke-opacity=".2"/>
+  <circle cx="210" cy="870" r="100" fill="none" stroke="#2AD4FF" stroke-opacity=".2"/>
+  <g stroke="#2AD4FF" stroke-width="2"><line x1="205" y1="870" x2="215" y2="870"/><line x1="210" y1="865" x2="210" y2="875"/></g>
+  <polygon points="262,800 270,808 262,816 254,808" fill="#B36BFF" stroke="#E6F1FF" stroke-width="1"/>
+  <g opacity=".7">
+    <circle cx="96" cy="846" r="8" fill="#FF4D5E"/>
+    <polygon points="160,960 165,968 155,968" fill="#FFD23F"/>
+  </g>
+
+  <!-- Estado de la estación con aviso de energía insuficiente -->
+  <text x="1872" y="898" text-anchor="end" class="f ta lbl">NIVEL 3</text>
+  <text x="1464" y="898" class="f lbl" fill="#FFB020">SIN ENERGÍA</text>
+  <path d="M1452 912 H1872 V1020 L1860 1032 H1440 V924 Z" class="p"/>
+  <text x="1464" y="946" class="f ts lbl">INTEGRIDAD</text>
+  <text x="1848" y="946" text-anchor="end" class="f tx" font-size="20" font-weight="600">40 / 100</text>
+  <rect x="1464" y="956" width="384" height="10" fill="#1A2638"/>
+  <rect x="1464" y="956" width="154" height="10" fill="#FFB020"/>
+  <text x="1464" y="996" class="f lbl" fill="#FFB020">ENERGÍA</text>
+  <text x="1848" y="996" text-anchor="end" class="f" fill="#FFB020" font-size="20" font-weight="600">6 / 100</text>
+  <rect x="1464" y="1006" width="384" height="10" fill="#1A2638" stroke="#FFB020" stroke-width="1"/>
+  <rect x="1464" y="1006" width="23" height="10" fill="#FFB020"/>
+</svg>

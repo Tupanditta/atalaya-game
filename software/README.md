@@ -18,13 +18,16 @@
 Esta carpeta contiene imágenes que muestran cual es la interfaz deseada a implementar. 
 
 **modulos/**
-El proyecto debe tener una estructura modular bien planteada. Se especificará cada módulo a implementar en una carpeta o archivo.md diferente en la carpeta software/. Luego en la implementación se debe conseguir la mayor independencia posible de los módulos respecto al resto de módulos y código del proyecto
+El proyecto debe tener una estructura modular bien planteada. Se especifica cada módulo a implementar en un archivo.md diferente dentro de la carpeta modulos/. El archivo modulos/README.md contiene la lista de módulos, las dependencias permitidas entre ellos, el orden de actualización y el catálogo de eventos con el que se comunican. Luego en la implementación se debe conseguir la mayor independencia posible de los módulos respecto al resto de módulos y código del proyecto
+
+**Diseño técnico**
+El archivo design.md especifica los lenguajes, herramientas, métodos y protocolos que se utilizan en la implementación para conseguir la mejor versión de lo especificado. No contiene código. Si contradice una regla, un requisito o una restricción, prevalece la especificación y design.md debe corregirse
 
 **Contexto**
 Contexto inicial del proyecto. En principio no es un archivo que se actualice. Es una idea base para empezar el proyecto. El proyecto final acabará teniendo muchos más conceptos que los especificados en el contexto. Es contexto sirve como punto de partida mínimo
 
 **Reglas de Negocio**
-Se especifican las reglas de negocio del proyecto 
+Se especifican las reglas de negocio del proyecto. Al final del archivo, la sección «Parámetros iniciales» reúne todos los valores numéricos del juego (cantidades, tiempos, velocidades), que se ajustan durante las pruebas sin cambiar las reglas
 
 **Requisitos**
 Se especifican los requisitos del proyecto. Se diferencian los no funcionales y los funcionales

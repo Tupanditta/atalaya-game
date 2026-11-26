@@ -4,7 +4,7 @@
 - **Actor principal:** ACT-01
 - **Actores secundarios:** ninguno
 - **Objetivo:** Orientar la vista, y con ella la mira, hacia la dirección que quiere vigilar o el objetivo al que quiere disparar.
-- **Requisitos relacionados:** RF-02, RF-03, RF-21, RF-28, RNF-01, RNF-02, RNF-03, RNF-04, RN-01, RN-12, RN-13, RN-26, RES-02, RES-04, RES-05, RES-06
+- **Requisitos relacionados:** RF-02, RF-03, RF-21, RF-28, RF-33, RNF-01, RNF-02, RNF-03, RNF-04, RN-01, RN-12, RN-13, RN-26, RN-29, RN-33, RN-39, RN-40, RN-41, RES-02, RES-04, RES-05, RES-06
 
 ## Precondiciones
 - Hay una partida en curso.
@@ -14,7 +14,7 @@ El jugador pulsa una flecha del teclado.
 
 ## Flujo principal
 1. El jugador mantiene pulsada una flecha: izquierda o derecha para girar en horizontal, arriba o abajo para girar en vertical.
-2. El sistema gira la vista en ese sentido, de forma continua, mientras la flecha siga pulsada, sin mover la posición de la estación. La mira permanece en el centro de la pantalla, así que apunta siempre hacia donde mira el jugador.
+2. El sistema gira la vista en ese sentido respecto a la propia cámara, de forma continua, mientras la flecha siga pulsada, sin mover la posición de la estación. La mira permanece en el centro de la pantalla, así que apunta siempre hacia donde mira el jugador.
 3. El jugador suelta la flecha.
 4. El sistema detiene el giro y mantiene la orientación alcanzada.
 
@@ -44,7 +44,7 @@ El jugador pulsa una flecha del teclado.
 
 ## Reglas de presentación
 - El radar se actualiza con la nueva orientación mientras la vista gira.
-- La velocidad de giro está [por definir].
+- La velocidad de giro es la fijada en los parámetros iniciales de `reglasNegocio.md`, y se reduce con el zoom (RN-40).
 
 ## Postcondiciones
 - La vista queda orientada en la dirección elegida. La posición de la estación no cambia.
@@ -60,4 +60,7 @@ El jugador pulsa una flecha del teclado.
 - Con arriba, izquierda y derecha pulsadas, la vista solo gira hacia arriba.
 - Con las cuatro flechas pulsadas, la vista no gira.
 - Girar nunca desplaza la posición de la estación.
+- Con zoom, la vista gira más despacio que sin zoom.
+- Tras una vuelta vertical completa, la vista vuelve a la orientación inicial.
+- Tras media vuelta vertical, la flecha derecha sigue girando la imagen hacia la derecha de la pantalla.
 - Mientras el jugador está aturdido, las flechas no tienen efecto.

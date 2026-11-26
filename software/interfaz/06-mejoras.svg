@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<svg xmlns="http://www.w3.org/2000/svg" width="1920" height="1080" viewBox="0 0 1920 1080">
+  <title>Atalaya · Pantalla de mejoras</title>
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="45%" r="75%"><stop offset="0" stop-color="#0D1A35"/><stop offset="1" stop-color="#02040A"/></radialGradient>
+    <filter id="nebula" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="80"/></filter>
+    <filter id="glow" x="-50%" y="-50%" width="200%" height="200%"><feGaussianBlur stdDeviation="5" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+  </defs>
+  <style>
+    .f{font-family:Rajdhani,'Segoe UI',sans-serif}
+    .i{font-family:Inter,'Segoe UI',sans-serif}
+    .p{fill:#0A1220;fill-opacity:.85;stroke:#2AD4FF;stroke-opacity:.35}
+    .tx{fill:#E6F1FF}.ts{fill:#8AA0B8}.ta{fill:#2AD4FF}
+    .lbl{font-size:16px;letter-spacing:3px;font-weight:600}
+    .opt{font-size:32px;font-weight:600;letter-spacing:3px}
+    .key{fill:none;stroke:#8AA0B8;stroke-width:1}
+  </style>
+
+  <rect width="1920" height="1080" fill="url(#bg)"/>
+  <ellipse cx="1500" cy="260" rx="480" ry="260" fill="#6B3FD6" opacity=".22" filter="url(#nebula)"/>
+  <g fill="#E6F1FF">
+    <circle cx="120" cy="90" r="1.2"/><circle cx="610" cy="120" r="1.5"/><circle cx="1040" cy="60" r="1.3"/><circle cx="1780" cy="180" r="1"/>
+    <circle cx="200" cy="980" r="1.2"/><circle cx="1700" cy="1000" r="1.1"/>
+  </g>
+  <rect width="1920" height="1080" fill="#000" opacity=".4"/>
+
+  <path d="M332 160 H1600 V908 L1588 920 H320 V172 Z" class="p"/>
+
+  <!-- Cabecera -->
+  <text x="368" y="250" class="f tx" font-size="48" font-weight="700" letter-spacing="6">OLEADA 14 SUPERADA</text>
+  <text x="1552" y="214" text-anchor="end" class="f ts lbl">SIGUIENTE OLEADA EN</text>
+  <text x="1552" y="262" text-anchor="end" class="f ta" font-size="48" font-weight="700">14 s</text>
+  <line x1="368" y1="290" x2="1552" y2="290" stroke="#2AD4FF" stroke-opacity=".25"/>
+
+  <!-- Columna izquierda -->
+  <text x="368" y="340" class="f ta lbl">◉ TRANSMISIÓN · MANDO DE LA RED</text>
+  <g class="i tx" font-size="20">
+    <text x="368" y="376">Buen trabajo, Atalaya. Los sensores detectan</text>
+    <text x="368" y="404">una nube de polvo acercándose al sector.</text>
+    <text x="368" y="432">La próxima oleada llegará entre la niebla.</text>
+  </g>
+  <text x="368" y="496" class="f ts lbl">RESULTADO</text>
+  <text x="368" y="528" class="i tx" font-size="20">Tiempo 01:12 · Referencia 01:00 · <tspan class="ta">+2 puntos</tspan></text>
+  <text x="368" y="596" class="f ts lbl">PUNTOS DISPONIBLES</text>
+  <text x="368" y="676" class="f ta" font-size="72" font-weight="700" filter="url(#glow)">5</text>
+  <text x="368" y="752" class="f ts lbl">INTEGRIDAD</text>
+  <text x="848" y="752" text-anchor="end" class="f tx" font-size="20" font-weight="600">46 / 110</text>
+  <rect x="368" y="764" width="480" height="10" fill="#1A2638"/>
+  <rect x="368" y="764" width="201" height="10" fill="#FFB020"/>
+
+  <line x1="880" y1="320" x2="880" y2="860" stroke="#2AD4FF" stroke-opacity=".15"/>
+
+  <!-- Opciones -->
+  <rect x="912" y="322" width="640" height="88" fill="#2AD4FF" fill-opacity=".14"/>
+  <rect x="912" y="322" width="4" height="88" fill="#2AD4FF"/>
+  <text x="940" y="362" class="f tx opt">REPARAR</text>
+  <text x="940" y="392" class="i ts" font-size="18">+20 integridad</text>
+  <text x="1528" y="372" text-anchor="end" class="f ta" font-size="22" font-weight="600" letter-spacing="2">1 PUNTO</text>
+
+  <text x="940" y="462" class="f ts opt">BLINDAJE</text>
+  <text x="940" y="492" class="i ts" font-size="18">+10 integridad máxima</text>
+  <g transform="translate(1300 466)"><circle cx="0" r="5" fill="#2AD4FF"/><circle cx="18" r="5" fill="none" stroke="#2AD4FF"/><circle cx="36" r="5" fill="none" stroke="#2AD4FF"/><circle cx="54" r="5" fill="none" stroke="#2AD4FF"/><circle cx="72" r="5" fill="none" stroke="#2AD4FF"/></g>
+  <text x="1528" y="472" text-anchor="end" class="f ts" font-size="22" font-weight="600" letter-spacing="2">2 PUNTOS</text>
+
+  <text x="940" y="562" class="f ts opt">BATERÍA</text>
+  <text x="940" y="592" class="i ts" font-size="18">+10 energía máxima</text>
+  <g transform="translate(1300 566)"><circle cx="0" r="5" fill="none" stroke="#2AD4FF"/><circle cx="18" r="5" fill="none" stroke="#2AD4FF"/><circle cx="36" r="5" fill="none" stroke="#2AD4FF"/><circle cx="54" r="5" fill="none" stroke="#2AD4FF"/><circle cx="72" r="5" fill="none" stroke="#2AD4FF"/></g>
+  <text x="1528" y="572" text-anchor="end" class="f ts" font-size="22" font-weight="600" letter-spacing="2">2 PUNTOS</text>
+
+  <text x="940" y="662" class="f ts opt">GENERADOR</text>
+  <text x="940" y="692" class="i ts" font-size="18">+1 recarga de energía por segundo</text>
+  <g transform="translate(1300 666)"><circle cx="0" r="5" fill="#2AD4FF"/><circle cx="18" r="5" fill="#2AD4FF"/><circle cx="36" r="5" fill="none" stroke="#2AD4FF"/><circle cx="54" r="5" fill="none" stroke="#2AD4FF"/><circle cx="72" r="5" fill="none" stroke="#2AD4FF"/></g>
+  <text x="1528" y="672" text-anchor="end" class="f ts" font-size="22" font-weight="600" letter-spacing="2">2 PUNTOS</text>
+
+  <line x1="912" y1="736" x2="1552" y2="736" stroke="#2AD4FF" stroke-opacity=".15"/>
+  <text x="940" y="782" class="f ts opt">CONTINUAR</text>
+  <text x="940" y="812" class="i ts" font-size="18">Empezar ya la oleada 15</text>
+
+  <!-- Ayudas -->
+  <g class="i" font-size="16" font-weight="500">
+    <rect x="720" y="1008" width="40" height="30" rx="4" class="key"/><text x="740" y="1029" text-anchor="middle" class="ts">↑↓</text>
+    <text x="770" y="1029" class="ts">Navegar</text>
+    <text x="846" y="1029" class="ts">·</text>
+    <rect x="866" y="1008" width="56" height="30" rx="4" class="key"/><text x="894" y="1029" text-anchor="middle" class="ts">Intro</text>
+    <text x="932" y="1029" class="ts">Comprar</text>
+    <text x="1004" y="1029" class="ts">·</text>
+    <rect x="1024" y="1008" width="44" height="30" rx="4" class="key"/><text x="1046" y="1029" text-anchor="middle" class="ts">Esc</text>
+    <text x="1078" y="1029" class="ts">Pausa</text>
+  </g>
+</svg>

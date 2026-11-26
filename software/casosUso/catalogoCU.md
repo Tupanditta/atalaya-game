@@ -17,3 +17,7 @@
 | CU-06 | Atacar la estación | ACT-02, ACT-01 | Que un enemigo dañe la estación o dificulte el control del jugador |
 | CU-07 | Superar oleada | ACT-01 | Que el jugador acabe con una oleada y avance en la partida |
 | CU-08 | Subir el nivel de dificultad | ACT-01 | Que el jugador juegue una partida más difícil tras ganar una |
+| CU-09 | Pausar la partida | ACT-01 | Que el jugador detenga la partida y decida si seguir, consultar el manual, abandonar o salir |
+| CU-10 | Consultar el manual | ACT-01 | Que el jugador conozca los controles, los enemigos, los entornos y las mejoras |
+| CU-11 | Mejorar y reparar la estación | ACT-01 | Que el jugador gaste sus puntos de mejora entre oleadas |
+| CU-12 | Salir del juego | ACT-01 | Que el jugador cierre el juego |

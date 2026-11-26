@@ -16,13 +16,13 @@ Servicios que el juego ofrece (requisitos funcionales) y cualidades que debe cum
 - **Descripción:** El sistema debe mostrar al jugador, al terminar la partida, el número de oleadas superadas.
 - **Prioridad:** Media
 - **Origen:** Propuesta derivada de contexto.md
-- **Estado:** Propuesto
+- **Estado:** Confirmado
 
 ### RF-20. Volver a jugar
 - **Descripción:** El sistema debe permitir que el jugador empiece una partida nueva desde el resumen de fin de partida.
 - **Prioridad:** Media
 - **Origen:** Propuesta derivada de contexto.md
-- **Estado:** Propuesto
+- **Estado:** Confirmado
 
 ### RF-24. Mostrar victoria
 - **Descripción:** El sistema debe indicar al jugador que ha ganado la partida cuando supera la oleada final.
@@ -80,8 +80,32 @@ Servicios que el juego ofrece (requisitos funcionales) y cualidades que debe cum
 - **Origen:** Usuario
 - **Estado:** Confirmado
 
+### RF-29. Fijar objetivo
+- **Descripción:** El sistema debe permitir que el jugador fije un enemigo manteniendo pulsada la barra espaciadora mientras lo mantiene bajo la mira, para que el disparo lo alcance aunque se mueva.
+- **Prioridad:** Alta
+- **Origen:** Usuario
+- **Estado:** Eliminado. Sustituido por RF-32 y RF-33.
+
+### RF-30. Indicar objetivo fijado
+- **Descripción:** El sistema debe mostrar la mira en verde mientras hay un objetivo fijado.
+- **Prioridad:** Alta
+- **Origen:** Usuario
+- **Estado:** Eliminado. El fijado ya no existe.
+
+### RF-32. Mira de precisión
+- **Descripción:** El sistema debe permitir que el jugador reduzca el tamaño de la mira manteniendo pulsada la barra espaciadora, para disparar con más precisión.
+- **Prioridad:** Alta
+- **Origen:** Usuario
+- **Estado:** Confirmado
+
+### RF-33. Zoom
+- **Descripción:** El sistema debe acercar la imagen a medida que la mira se reduce, para que el jugador vea más lejos.
+- **Prioridad:** Alta
+- **Origen:** Usuario
+- **Estado:** Confirmado
+
 ### RF-05. Disparar
-- **Descripción:** El sistema debe permitir que el jugador dispare hacia la mira pulsando la barra espaciadora.
+- **Descripción:** El sistema debe permitir que el jugador dispare hacia la mira con la barra espaciadora. El disparo sale al soltar la tecla.
 - **Prioridad:** Alta
 - **Origen:** contexto.md, «Mecánica principal»
 - **Estado:** Confirmado
@@ -112,6 +136,12 @@ Servicios que el juego ofrece (requisitos funcionales) y cualidades que debe cum
 - **Origen:** Usuario
 - **Estado:** Confirmado
 
+### RF-31. Mostrar la distancia en el radar
+- **Descripción:** El sistema debe mostrar en el radar a qué distancia de la estación está cada enemigo.
+- **Prioridad:** Media
+- **Origen:** Usuario
+- **Estado:** Confirmado
+
 ### RF-08. Mostrar integridad de la estación
 - **Descripción:** El sistema debe mostrar al jugador, durante la partida, cuánto daño puede aguantar aún la estación.
 - **Prioridad:** Alta
@@ -122,7 +152,7 @@ Servicios que el juego ofrece (requisitos funcionales) y cualidades que debe cum
 - **Descripción:** El sistema debe indicar al jugador que está aturdido mientras dura el aturdimiento.
 - **Prioridad:** Media
 - **Origen:** Propuesta derivada de contexto.md, «Estabilidad de la pantalla»
-- **Estado:** Propuesto
+- **Estado:** Confirmado
 
 ### Enemigos
 
@@ -182,27 +212,103 @@ Servicios que el juego ofrece (requisitos funcionales) y cualidades que debe cum
 - **Descripción:** El sistema debe reproducir música que acompañe la intensidad de cada momento de la partida.
 - **Prioridad:** Baja
 - **Origen:** contexto.md, «Ambientación audiovisual»
-- **Estado:** Propuesto
+- **Estado:** Confirmado
+
+### RF-45. Entornos de baja visibilidad
+- **Descripción:** El sistema debe presentar, en las oleadas que corresponda, un entorno de niebla o de destellos que reduzca lo que el jugador ve del espacio.
+- **Prioridad:** Media
+- **Origen:** Usuario
+- **Estado:** Confirmado
+
+### Menús
+
+### RF-34. Menú principal
+- **Descripción:** El sistema debe mostrar, al abrir el juego, un menú principal desde el que el jugador pueda empezar a jugar, consultar el manual o salir del juego.
+- **Prioridad:** Alta
+- **Origen:** Usuario
+- **Estado:** Confirmado
+
+### RF-35. Pausar la partida
+- **Descripción:** El sistema debe permitir que el jugador pause la partida en cualquier momento con la tecla Esc.
+- **Prioridad:** Alta
+- **Origen:** Usuario
+- **Estado:** Confirmado
+
+### RF-36. Reanudar la partida
+- **Descripción:** El sistema debe permitir que el jugador reanude la partida pausada en el mismo punto en que la dejó.
+- **Prioridad:** Alta
+- **Origen:** Usuario
+- **Estado:** Confirmado
+
+### RF-37. Abandonar la partida
+- **Descripción:** El sistema debe permitir que el jugador abandone la partida en curso desde la pausa y vuelva al menú principal.
+- **Prioridad:** Media
+- **Origen:** Usuario
+- **Estado:** Confirmado
+
+### RF-38. Salir del juego
+- **Descripción:** El sistema debe permitir que el jugador cierre el juego desde el menú principal o desde la pausa.
+- **Prioridad:** Alta
+- **Origen:** Usuario
+- **Estado:** Confirmado
+
+### RF-39. Consultar el manual
+- **Descripción:** El sistema debe permitir que el jugador consulte, desde el menú principal o desde la pausa, un manual con los controles, los tipos y tamaños de enemigos con sus características, los entornos de baja visibilidad y las mejoras.
+- **Prioridad:** Media
+- **Origen:** Usuario
+- **Estado:** Confirmado
+
+### Mejoras y reparación
+
+### RF-40. Pantalla de mejoras
+- **Descripción:** El sistema debe mostrar una pantalla de mejoras durante el descanso entre oleadas.
+- **Prioridad:** Alta
+- **Origen:** Usuario
+- **Estado:** Confirmado
+
+### RF-41. Reparar la estación
+- **Descripción:** El sistema debe permitir que el jugador gaste puntos de mejora en reparar la estación desde la pantalla de mejoras.
+- **Prioridad:** Alta
+- **Origen:** Usuario
+- **Estado:** Confirmado
+
+### RF-42. Mejorar la estación
+- **Descripción:** El sistema debe permitir que el jugador gaste puntos de mejora en subir de nivel el blindaje, la batería o el generador de la estación desde la pantalla de mejoras.
+- **Prioridad:** Alta
+- **Origen:** Usuario
+- **Estado:** Confirmado
+
+### RF-43. Mostrar el resultado de la oleada
+- **Descripción:** El sistema debe mostrar en la pantalla de mejoras el tiempo que el jugador ha tardado en superar la oleada, los puntos obtenidos y los puntos disponibles.
+- **Prioridad:** Media
+- **Origen:** Usuario
+- **Estado:** Confirmado
+
+### RF-44. Terminar el descanso antes de tiempo
+- **Descripción:** El sistema debe permitir que el jugador cierre la pantalla de mejoras y empiece la siguiente oleada sin esperar a que acabe el descanso.
+- **Prioridad:** Baja
+- **Origen:** Decisión delegada por el usuario
+- **Estado:** Confirmado
 
 ## Requisitos no funcionales
 
 ### RNF-01. Fluidez
 - **Descripción:** El juego debe mantenerse fluido durante las oleadas.
-- **Medida:** Al menos 60 fotogramas por segundo de media, y nunca menos de 30, durante una oleada en el equipo de referencia (por definir).
+- **Medida:** Al menos 60 fotogramas por segundo de media, y nunca menos de 30, durante una oleada en el equipo de referencia: procesador de 4 núcleos, 8 GB de RAM, gráficos integrados y resolución de 1920 × 1080.
 - **Prioridad:** Media
 - **Origen:** Propuesta
-- **Estado:** Propuesto
+- **Estado:** Confirmado
 
 ### RNF-02. Respuesta de los controles
 - **Descripción:** Los giros y los disparos deben reflejarse en pantalla sin retraso perceptible.
 - **Medida:** Tiempo entre la acción del jugador y su efecto en pantalla menor o igual a 50 ms.
 - **Prioridad:** Alta
 - **Origen:** Propuesta
-- **Estado:** Propuesto
+- **Estado:** Confirmado
 
 ### RNF-03. Controles reducidos
-- **Descripción:** Durante la partida, el jugador debe poder jugar solo con las flechas y la barra espaciadora.
-- **Medida:** Ninguna acción de la partida requiere teclas distintas de las cuatro flechas y la barra espaciadora. Ninguna acción requiere ratón.
+- **Descripción:** El juego debe manejarse solo con el teclado y con muy pocas teclas.
+- **Medida:** Durante una oleada solo se usan las cuatro flechas, la barra espaciadora y Esc (pausa). En los menús y pantallas solo se usan las flechas, Intro (confirmar) y Esc (volver). Ninguna acción requiere ratón.
 - **Prioridad:** Alta
 - **Origen:** contexto.md, «Pilares del diseño»
 - **Estado:** Confirmado
@@ -215,8 +321,8 @@ Servicios que el juego ofrece (requisitos funcionales) y cualidades que debe cum
 - **Estado:** Confirmado
 
 ### RNF-05. Disparo fluido
-- **Descripción:** El disparo y su efecto deben aparecer sin retraso respecto a la pulsación de la tecla de disparo.
-- **Medida:** El rayo del disparo y su impacto se muestran en el primer fotograma tras la pulsación.
+- **Descripción:** El disparo y su efecto deben aparecer sin retraso al soltar la tecla de disparo.
+- **Medida:** El rayo del disparo y su impacto se muestran en el primer fotograma tras soltar la barra espaciadora.
 - **Prioridad:** Alta
 - **Origen:** Usuario
 - **Estado:** Confirmado

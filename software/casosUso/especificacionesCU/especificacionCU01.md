@@ -4,22 +4,22 @@
 - **Actor principal:** ACT-01
 - **Actores secundarios:** ninguno
 - **Objetivo:** Empezar una partida nueva.
-- **Requisitos relacionados:** RF-01, RF-06, RF-07, RF-08, RF-09, RF-16, RF-18, RF-20, RF-27, RN-02, RN-24, RN-25, RES-01, RES-05, RES-06, RES-07
+- **Requisitos relacionados:** RF-01, RF-06, RF-07, RF-08, RF-09, RF-16, RF-18, RF-20, RF-27, RF-34, RNF-03, RN-02, RN-24, RN-25, RN-32, RN-49, RES-01, RES-04, RES-05, RES-06, RES-07
 
 ## Precondiciones
-- El juego está abierto y no hay una partida en curso.
+- El juego está abierto en el menú principal y no hay una partida en curso.
 
 ## Disparador
-El jugador elige empezar una partida.
+El jugador elige «Jugar» en el menú principal.
 
 ## Flujo principal
-1. El jugador solicita empezar una partida.
+1. El jugador elige «Jugar» en el menú principal.
 2. El sistema muestra los niveles de dificultad disponibles, del 1 al nivel más alto desbloqueado, con el más alto ya seleccionado.
 3. El jugador elige un nivel o acepta el seleccionado.
 4. El sistema fija el nivel elegido y pone la energía y la integridad de la estación al máximo.
 5. El sistema muestra la vista desde la estación con la mira, el radar, la barra de energía y la integridad de la estación.
 6. El sistema presenta la transmisión de radio inicial de la historia.
-7. El sistema inicia la primera oleada de enemigos.
+7. El sistema inicia la primera oleada de enemigos, que aparecen lejos de la estación.
 
 ## Flujos alternativos y excepciones
 ### A1. Solo hay un nivel disponible (desde el paso 2)
@@ -42,9 +42,13 @@ El jugador elige empezar una partida.
 2. El sistema toma el nivel 1 como nivel más alto desbloqueado, sin mostrar un error que bloquee el juego (ver `basesDatos/especificacion.md`).
 3. Continúa en A1.
 
+### A5. Volver al menú (desde el paso 3)
+1. El jugador pulsa Esc en la selección de nivel.
+2. El sistema vuelve al menú principal sin empezar la partida. Finaliza.
+
 ## Reglas de presentación
 - La mira, el radar, la barra de energía y la integridad de la estación son visibles durante toda la partida.
-- La disposición de estos elementos en pantalla está [por definir].
+- La mira está en el centro de la pantalla. El radar, la barra de energía, la integridad y el nivel de dificultad se colocan en los bordes, sin tapar el centro. La disposición exacta se especifica en `interfaz/`.
 
 ## Postcondiciones
 - Hay una partida en curso en el nivel elegido, con la primera oleada activa y la energía y la integridad al máximo.
@@ -54,6 +58,8 @@ El jugador elige empezar una partida.
 - Al empezar una partida, la mira, el radar, la barra de energía y la integridad son visibles.
 - Antes de la primera oleada se presenta la transmisión de radio inicial.
 - La primera vez que se abre el juego, la partida empieza en el nivel 1 sin pedir elegir nivel.
+- La partida empieza sin puntos de mejora ni mejoras.
+- En la selección de nivel, el nivel se cambia con las flechas, se confirma con Intro y Esc vuelve al menú principal.
 - Con varios niveles desbloqueados, solo se ofrecen niveles del 1 al más alto desbloqueado, y el más alto aparece seleccionado.
 - Al volver a jugar desde el resumen, la partida nueva conserva solo el nivel de dificultad de la anterior.
 - Si el dato guardado está dañado, el juego arranca en el nivel 1 sin bloquearse.

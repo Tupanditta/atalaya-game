@@ -23,7 +23,7 @@ El jugador elige subir el nivel de dificultad en el resumen de victoria.
 No se identifican flujos alternativos o excepciones. No hay nivel máximo: siempre se puede subir al siguiente tras ganar.
 
 ## Reglas de presentación
-- El sistema muestra el nivel de dificultad de la partida. Dónde y cómo está [por definir].
+- El nivel de dificultad se muestra durante toda la partida junto a la integridad de la estación, en la selección de nivel y en el resumen de fin de partida.
 
 ## Postcondiciones
 - Hay una partida nueva en curso en el nivel de dificultad siguiente.
