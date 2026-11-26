@@ -1,0 +1,9 @@
+-r requirements.txt
+pytest==9.2.0
+pytest-cov==7.1.0
+coverage==7.17.2
+ruff==0.17.4
+mypy==2.4.1
+# Dependencias indirectas fijadas para respetar la antigüedad mínima de dos semanas
+librt==0.16.0
+packaging==26.3

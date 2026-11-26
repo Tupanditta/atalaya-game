@@ -1,0 +1,81 @@
+{
+  "version": 1,
+  "jugador": {
+    "energia_maxima": 100,
+    "coste_disparo": 10,
+    "recarga_energia": 8,
+    "integridad_maxima": 100,
+    "dano_disparo": 10,
+    "velocidad_giro": 90,
+    "campo_vision_normal": 70,
+    "campo_vision_zoom": 25,
+    "mira_normal": 3,
+    "mira_minima": 0.5,
+    "tiempo_apuntado": 1.5,
+    "tiempo_vuelta_mira": 0.2
+  },
+  "tamanos": {
+    "pequeno": {"vida": 10, "velocidad_maxima": 110, "aceleracion_maxima": 55, "radio_impacto": 6},
+    "mediano": {"vida": 20, "velocidad_maxima": 70, "aceleracion_maxima": 35, "radio_impacto": 12},
+    "grande": {"vida": 40, "velocidad_maxima": 40, "aceleracion_maxima": 20, "radio_impacto": 24}
+  },
+  "tipos": {
+    "sin_efecto": {"dano": 3, "recarga": 4, "duracion_efecto": 0},
+    "desestabilizador": {"dano": 1, "recarga": 3, "duracion_efecto": 3},
+    "aturdidor": {"dano": 2, "recarga": 8, "duracion_efecto": 1.5}
+  },
+  "ataques": {
+    "duracion_aviso": 1,
+    "velocidad_proyectil": 300,
+    "distancia_aparicion_minima": 900,
+    "distancia_aparicion_maxima": 1000,
+    "distancia_maxima": 1000,
+    "alcance_disparo": 700,
+    "distancia_minima": 150,
+    "alcance_radar": 1200,
+    "distancia_llegada": 50,
+    "desvio_maximo": 2,
+    "velocidad_desvio": 30,
+    "enemigos_activos_maximos": 6,
+    "intervalo_aparicion": 2
+  },
+  "oleadas": {
+    "numero_oleadas": 50,
+    "enemigos_base": 3,
+    "divisor_enemigos": 2,
+    "oleada_desestabilizadores": 5,
+    "oleada_aturdidores": 10,
+    "divisor_efecto": 3,
+    "fondos": 10,
+    "oleadas_por_fondo": 5
+  },
+  "entornos": {
+    "primera_oleada": 15,
+    "intervalo_oleadas": 3,
+    "niebla_visibilidad_completa": 250,
+    "niebla_invisible": 700,
+    "destellos_intervalo_minimo": 12,
+    "destellos_intervalo_maximo": 20,
+    "destellos_aviso": 1,
+    "destellos_deslumbramiento": 1.5
+  },
+  "mejoras": {
+    "tiempo_referencia_base": 10,
+    "tiempo_referencia_por_enemigo": 5,
+    "puntos_rapido": 3,
+    "puntos_medio": 2,
+    "puntos_lento": 1,
+    "factor_tiempo_medio": 2,
+    "coste_reparacion": 1,
+    "cantidad_reparacion": 20,
+    "blindaje": {"efecto": 10, "niveles_maximos": 5, "coste": 2},
+    "bateria": {"efecto": 10, "niveles_maximos": 5, "coste": 2},
+    "generador": {"efecto": 1, "niveles_maximos": 5, "coste": 2}
+  },
+  "nivel": {
+    "incremento_vida": 0.25,
+    "descanso_minimo": 5,
+    "descanso_variable": 15,
+    "factor_descanso": 0.85
+  }
+}
