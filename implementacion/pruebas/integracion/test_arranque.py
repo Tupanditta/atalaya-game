@@ -59,3 +59,31 @@ def test_esc_cierra_el_juego(parametros: Parametros) -> None:
     teclado.teclas = {"escape"}
     juego.nucleo.avanzar(PASO)
     assert juego.flujo.salir_solicitado
+
+
+def test_s2_partida_con_enemigos_y_disparo(parametros: Parametros) -> None:
+    """S2: al empezar aparecen enemigos que se mueven y la barra espaciadora dispara."""
+    from atalaya.logica.nucleo.eventos import DisparoRealizado
+
+    teclado = TecladoFalso()
+    juego = montar(parametros, teclado, semilla=2)
+    disparos: list[DisparoRealizado] = []
+    juego.nucleo.bus.suscribir(DisparoRealizado, disparos.append)
+    juego.flujo.iniciar_partida()
+    for _ in range(60):
+        juego.nucleo.avanzar(PASO)
+    (enemigo,) = juego.enemigos.activos
+    assert enemigo.posicion != enemigo.posicion_anterior
+    assert juego.oleadas.numero == 1
+    teclado.teclas = {"space"}
+    # 1,5 s de apuntado; `vista` aplica el zoom en el paso siguiente.
+    for _ in range(91):
+        juego.nucleo.avanzar(PASO)
+    assert juego.armamento.progreso_apuntado == 1
+    assert juego.vista.campo_vision == parametros.jugador.campo_vision_zoom
+    teclado.teclas = set()
+    juego.nucleo.avanzar(PASO)
+    assert len(disparos) == 1
+    assert juego.armamento.energia == pytest.approx(
+        parametros.jugador.energia_maxima - parametros.jugador.coste_disparo
+    )

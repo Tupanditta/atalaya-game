@@ -1,4 +1,8 @@
-"""Módulo armamento: Energía, mira de precisión y disparo.
+"""Módulo armamento: energía, mira de precisión y disparo.
 
-Se implementa en un sprint posterior (`software/sprints.md`).
+Ver `software/modulos/armamento.md`.
 """
+
+from atalaya.logica.armamento.armamento import Armamento, Mira, direccion_disparo
+
+__all__ = ["Armamento", "Mira", "direccion_disparo"]

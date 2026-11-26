@@ -1,4 +1,8 @@
-"""Módulo oleadas: Composición, aparición, fin de oleada, descanso y victoria.
+"""Módulo oleadas: composición, aparición, fin de oleada, descanso y victoria.
 
-Se implementa en un sprint posterior (`software/sprints.md`).
+Ver `software/modulos/oleadas.md`.
 """
+
+from atalaya.logica.oleadas.oleadas import EnemigoPendiente, Oleadas
+
+__all__ = ["EnemigoPendiente", "Oleadas"]

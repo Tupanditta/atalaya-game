@@ -1,7 +1,8 @@
-"""Pruebas del flujo mínimo de S1: la oleada en curso entrega los ejes de giro a vista."""
+"""Pruebas del flujo mínimo: la oleada en curso entrega el giro a vista y la barra a armamento."""
 
 import pytest
 
+from atalaya.logica.armamento import Armamento
 from atalaya.logica.flujo import Flujo, Pantalla
 from atalaya.logica.nucleo import PASO, Etapa, Nucleo
 from atalaya.logica.nucleo.dominio import Accion, Vector3
@@ -27,11 +28,16 @@ class AccionesFalsas:
         return False
 
 
+def _flujo(nucleo: Nucleo, parametros: Parametros, acciones: AccionesFalsas, vista: Vista) -> Flujo:
+    armamento = Armamento(nucleo.bus, parametros, vista, nucleo.azar)
+    return Flujo(nucleo.bus, acciones, vista, armamento)
+
+
 def _montar(parametros: Parametros) -> tuple[Nucleo, Flujo, Vista, AccionesFalsas]:
     nucleo = Nucleo(semilla=1)
     acciones = AccionesFalsas()
     vista = Vista(nucleo.bus, parametros)
-    flujo = Flujo(nucleo.bus, acciones, vista)
+    flujo = _flujo(nucleo, parametros, acciones, vista)
     nucleo.registrar(Etapa.FLUJO, flujo)
     nucleo.registrar(Etapa.VISTA, vista)
     flujo.iniciar_partida()
@@ -52,7 +58,7 @@ def test_iniciar_partida(parametros: Parametros) -> None:
     nucleo = Nucleo(semilla=1)
     recibidos: list[PartidaIniciada] = []
     nucleo.bus.suscribir(PartidaIniciada, recibidos.append)
-    flujo = Flujo(nucleo.bus, AccionesFalsas(), Vista(nucleo.bus, parametros))
+    flujo = _flujo(nucleo, parametros, AccionesFalsas(), Vista(nucleo.bus, parametros))
     assert flujo.pantalla is None
     flujo.iniciar_partida(nivel=3)
     nucleo.bus.entregar()
@@ -66,7 +72,7 @@ def test_antes_de_la_partida_no_gira(parametros: Parametros) -> None:
     nucleo = Nucleo(semilla=1)
     acciones = AccionesFalsas()
     vista = Vista(nucleo.bus, parametros)
-    nucleo.registrar(Etapa.FLUJO, Flujo(nucleo.bus, acciones, vista))
+    nucleo.registrar(Etapa.FLUJO, _flujo(nucleo, parametros, acciones, vista))
     nucleo.registrar(Etapa.VISTA, vista)
     acciones.mantenidas = {Accion.DERECHA}
     _pasos(nucleo, 10)
@@ -113,3 +119,18 @@ def test_esc_pide_salir(parametros: Parametros) -> None:
     acciones.pulsadas = {Accion.PAUSA}
     _pasos(nucleo, 1)
     assert flujo.salir_solicitado
+
+
+def test_barra_espaciadora_llega_a_armamento(parametros: Parametros) -> None:
+    """Durante la oleada, mantener la barra espaciadora hace apuntar a armamento (RN-38)."""
+    nucleo = Nucleo(semilla=1)
+    acciones = AccionesFalsas()
+    vista = Vista(nucleo.bus, parametros)
+    armamento = Armamento(nucleo.bus, parametros, vista, nucleo.azar)
+    flujo = Flujo(nucleo.bus, acciones, vista, armamento)
+    nucleo.registrar(Etapa.FLUJO, flujo)
+    nucleo.registrar(Etapa.ARMAMENTO, armamento)
+    flujo.iniciar_partida()
+    acciones.mantenidas = {Accion.DISPARO}
+    _pasos(nucleo, 30)
+    assert armamento.progreso_apuntado > 0

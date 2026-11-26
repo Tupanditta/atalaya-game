@@ -1,12 +1,14 @@
 """Pantallas del juego y reparto de las acciones del jugador (`modulos/flujo.md`).
 
-Versión mínima de S1: una sola pantalla, la oleada en curso, que entrega los ejes de
-giro a `vista`. Los menús, la pausa y el descanso llegan en sprints posteriores.
+Versión mínima: una sola pantalla, la oleada en curso, que entrega los ejes de giro a
+`vista` y el estado de la barra espaciadora a `armamento`. Los menús, la pausa y el
+descanso llegan en sprints posteriores.
 """
 
 from enum import Enum
 from typing import Protocol
 
+from atalaya.logica.armamento import Armamento
 from atalaya.logica.nucleo.bus import Bus
 from atalaya.logica.nucleo.dominio import Accion
 from atalaya.logica.nucleo.eventos import PartidaIniciada
@@ -35,10 +37,11 @@ class Pantalla(Enum):
 class Flujo:
     """Sabe en qué pantalla está el juego y decide qué hace cada acción en ella."""
 
-    def __init__(self, bus: Bus, acciones: Acciones, vista: Vista) -> None:
+    def __init__(self, bus: Bus, acciones: Acciones, vista: Vista, armamento: Armamento) -> None:
         self._bus = bus
         self._acciones = acciones
         self._vista = vista
+        self._armamento = armamento
         self._pantalla: Pantalla | None = None
         self._nivel = 1
         self._salir = False
@@ -79,3 +82,4 @@ class Flujo:
             eje_de_flechas(a.mantenida(Accion.IZQUIERDA), a.mantenida(Accion.DERECHA)),
             eje_de_flechas(a.mantenida(Accion.ABAJO), a.mantenida(Accion.ARRIBA)),
         )
+        self._armamento.recibir_disparo(a.mantenida(Accion.DISPARO))
