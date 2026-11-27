@@ -42,6 +42,13 @@ ESPERADO: dict[tuple[str, str], Esperado] = {
     ("Jugador y estación", "Tiempo de vuelta de la mira y el zoom a su estado normal"): lambda p: [
         p.jugador.tiempo_vuelta_mira
     ],
+    ("Jugador y estación", "Escudo máximo"): lambda p: [p.jugador.escudo_maximo],
+    ("Jugador y estación", "Escudo: umbral con la duración de referencia de los efectos"): (
+        lambda p: [p.jugador.umbral_escudo]
+    ),
+    ("Jugador y estación", "Escudo: duración de los efectos con el escudo lleno"): lambda p: [
+        p.jugador.factor_minimo_escudo * 100
+    ],
     # Enemigos por tamaño
     **{
         ("Enemigos por tamaño", etiqueta): (
@@ -62,16 +69,21 @@ ESPERADO: dict[tuple[str, str], Esperado] = {
     ("Enemigos por tipo", "Sin efecto especial"): lambda p: [
         p.tipos.sin_efecto.dano,
         p.tipos.sin_efecto.recarga,
+        p.tipos.sin_efecto.desgaste_escudo,
     ],
     ("Enemigos por tipo", "Desestabilizador"): lambda p: [
         p.tipos.desestabilizador.dano,
         p.tipos.desestabilizador.recarga,
+        p.tipos.desestabilizador.desgaste_escudo,
         p.tipos.desestabilizador.duracion_efecto,
+        p.tipos.desestabilizador.duracion_efecto_maxima,
     ],
     ("Enemigos por tipo", "Aturdidor"): lambda p: [
         p.tipos.aturdidor.dano,
         p.tipos.aturdidor.recarga,
+        p.tipos.aturdidor.desgaste_escudo,
         p.tipos.aturdidor.duracion_efecto,
+        p.tipos.aturdidor.duracion_efecto_maxima,
     ],
     # Ataques y distancias
     ("Ataques y distancias", "Duración del aviso de disparo"): lambda p: [p.ataques.duracion_aviso],
@@ -161,6 +173,16 @@ ESPERADO: dict[tuple[str, str], Esperado] = {
     ("Mejoras y reparación", "Reparación"): lambda p: [
         p.mejoras.coste_reparacion,
         p.mejoras.cantidad_reparacion,
+    ],
+    ("Mejoras y reparación", "Regeneración del escudo"): lambda p: [
+        p.mejoras.coste_regeneracion,
+        p.mejoras.cantidad_regeneracion,
+    ],
+    ("Mejoras y reparación", "Escudo"): lambda p: [
+        p.mejoras.escudo.efecto,
+        p.mejoras.escudo.efecto,
+        p.mejoras.escudo.niveles_maximos,
+        p.mejoras.escudo.coste,
     ],
     ("Mejoras y reparación", "Blindaje"): lambda p: [
         p.mejoras.blindaje.efecto,

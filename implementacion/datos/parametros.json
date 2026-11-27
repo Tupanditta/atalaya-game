@@ -12,7 +12,10 @@
     "mira_normal": 2.5,
     "mira_minima": 0.5,
     "tiempo_apuntado": 1,
-    "tiempo_vuelta_mira": 0.2
+    "tiempo_vuelta_mira": 0.2,
+    "escudo_maximo": 100,
+    "umbral_escudo": 60,
+    "factor_minimo_escudo": 0.1
   },
   "tamanos": {
     "pequeno": {"vida": 10, "velocidad_maxima": 880, "aceleracion_maxima": 1760, "radio_impacto": 20},
@@ -20,9 +23,9 @@
     "grande": {"vida": 40, "velocidad_maxima": 320, "aceleracion_maxima": 640, "radio_impacto": 64}
   },
   "tipos": {
-    "sin_efecto": {"dano": 3, "recarga": 1, "duracion_efecto": 0},
-    "desestabilizador": {"dano": 1, "recarga": 0.75, "duracion_efecto": 3},
-    "aturdidor": {"dano": 2, "recarga": 2, "duracion_efecto": 1.5}
+    "sin_efecto": {"dano": 3, "recarga": 1, "duracion_efecto": 0, "duracion_efecto_maxima": 0, "desgaste_escudo": 0},
+    "desestabilizador": {"dano": 1, "recarga": 0.75, "duracion_efecto": 3, "duracion_efecto_maxima": 10, "desgaste_escudo": 20},
+    "aturdidor": {"dano": 2, "recarga": 2, "duracion_efecto": 1.5, "duracion_efecto_maxima": 5, "desgaste_escudo": 20}
   },
   "ataques": {
     "duracion_aviso": 0.3,
@@ -64,17 +67,20 @@
     "destellos_deslumbramiento": 1.5
   },
   "mejoras": {
-    "tiempo_referencia_base": 10,
-    "tiempo_referencia_por_enemigo": 5,
-    "puntos_rapido": 3,
+    "tiempo_referencia_base": 15,
+    "tiempo_referencia_por_enemigo": 7.5,
+    "puntos_rapido": 5,
     "puntos_medio": 2,
     "puntos_lento": 1,
     "factor_tiempo_medio": 2,
     "coste_reparacion": 1,
     "cantidad_reparacion": 20,
-    "blindaje": {"efecto": 10, "niveles_maximos": 5, "coste": 2},
-    "bateria": {"efecto": 10, "niveles_maximos": 5, "coste": 2},
-    "generador": {"efecto": 1, "niveles_maximos": 5, "coste": 2}
+    "coste_regeneracion": 1,
+    "cantidad_regeneracion": 40,
+    "blindaje": {"efecto": 10, "niveles_maximos": 10, "coste": 2},
+    "escudo": {"efecto": 20, "niveles_maximos": 10, "coste": 2},
+    "bateria": {"efecto": 10, "niveles_maximos": 10, "coste": 2},
+    "generador": {"efecto": 1, "niveles_maximos": 10, "coste": 2}
   },
   "nivel": {
     "incremento_vida": 0.25,

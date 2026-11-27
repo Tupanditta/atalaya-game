@@ -97,7 +97,7 @@ def test_s5_t16_continuar_termina_el_descanso(montaje: Montaje) -> None:
     montaje.abrir_descanso()
     assert montaje.flujo.pantalla is Pantalla.DESCANSO
     assert montaje.flujo.seleccion_descanso is OpcionDescanso.REPARAR
-    montaje.pulsar(*[Accion.ABAJO] * 4)
+    montaje.pulsar(*[Accion.ABAJO] * 6)
     assert montaje.flujo.seleccion_descanso is OpcionDescanso.CONTINUAR
     montaje.pulsar(Accion.CONFIRMAR)
     assert montaje.solicitudes == [TerminarDescansoSolicitado()]
@@ -114,7 +114,7 @@ def test_s5_t17_flechas_en_la_pantalla_de_mejoras(montaje: Montaje) -> None:
     montaje.abrir_descanso()
     orientacion = montaje.vista.orientacion
     montaje.pulsar(Accion.ABAJO, Accion.ABAJO)
-    assert montaje.flujo.seleccion_descanso is OpcionDescanso.BATERIA
+    assert montaje.flujo.seleccion_descanso is OpcionDescanso.REGENERAR
     montaje.pulsar(Accion.ARRIBA)
     assert montaje.flujo.seleccion_descanso is OpcionDescanso.BLINDAJE
     montaje.acciones.mantenidas = {Accion.DERECHA, Accion.ARRIBA}
@@ -130,9 +130,9 @@ def test_la_seleccion_no_sale_de_la_lista(montaje: Montaje) -> None:
     montaje.pulsar(Accion.ARRIBA)
     assert montaje.flujo.seleccion_descanso is OpcionDescanso.REPARAR
     assert montaje.flujo.sonidos_menu(SonidoMenu.MOVER) == 0
-    montaje.pulsar(*[Accion.ABAJO] * 6)
+    montaje.pulsar(*[Accion.ABAJO] * 8)
     assert montaje.flujo.seleccion_descanso is OpcionDescanso.CONTINUAR
-    assert montaje.flujo.sonidos_menu(SonidoMenu.MOVER) == 4
+    assert montaje.flujo.sonidos_menu(SonidoMenu.MOVER) == 6
 
 
 def test_cu11_intro_repara(montaje: Montaje, parametros: Parametros) -> None:
@@ -143,7 +143,7 @@ def test_cu11_intro_repara(montaje: Montaje, parametros: Parametros) -> None:
     assert montaje.estacion.integridad == 70
     montaje.pulsar(Accion.CONFIRMAR)
     assert montaje.estacion.integridad == 70 + parametros.mejoras.cantidad_reparacion
-    assert montaje.mejoras.puntos == 2
+    assert montaje.mejoras.puntos == 4
     assert montaje.flujo.sonidos_menu(SonidoMenu.CONFIRMAR) == 1
     assert montaje.flujo.sonidos_menu(SonidoMenu.ERROR) == 0
 
@@ -151,10 +151,27 @@ def test_cu11_intro_repara(montaje: Montaje, parametros: Parametros) -> None:
 def test_cu11_intro_mejora(montaje: Montaje) -> None:
     """CU-11 A1: Intro sobre «Generador» sube su nivel."""
     montaje.abrir_descanso(puntos_de_oleadas=1)
-    montaje.pulsar(Accion.ABAJO, Accion.ABAJO, Accion.ABAJO, Accion.CONFIRMAR)
+    montaje.pulsar(*[Accion.ABAJO] * 5, Accion.CONFIRMAR)
     assert montaje.mejoras.nivel(Mejora.GENERADOR) == 1
     assert montaje.armamento.recarga_energia == 9
-    assert montaje.mejoras.puntos == 1
+    assert montaje.mejoras.puntos == 3
+
+
+def test_rn51_intro_regenera_y_expande_el_escudo(montaje: Montaje, parametros: Parametros) -> None:
+    """RN-51: Intro sobre «Regenerar escudo» devuelve escudo; sobre «Escudo», lo expande."""
+    for _ in range(3):
+        montaje.nucleo.bus.publicar(ProyectilImpacta(TipoEnemigo.DESESTABILIZADOR))
+    montaje.abrir_descanso(puntos_de_oleadas=1)
+    assert montaje.estacion.escudo == 40
+    montaje.pulsar(Accion.ABAJO, Accion.ABAJO, Accion.CONFIRMAR)
+    assert montaje.estacion.escudo == 40 + parametros.mejoras.cantidad_regeneracion
+    assert montaje.mejoras.puntos == 4
+    montaje.pulsar(Accion.ABAJO, Accion.CONFIRMAR)
+    assert montaje.mejoras.nivel(Mejora.ESCUDO) == 1
+    assert montaje.estacion.escudo_maximo == 120
+    assert montaje.estacion.escudo == 100
+    assert montaje.mejoras.puntos == 2
+    assert montaje.flujo.sonidos_menu(SonidoMenu.CONFIRMAR) == 2
 
 
 def test_cu11_a2_opcion_no_disponible_suena_error(montaje: Montaje) -> None:
@@ -193,7 +210,7 @@ def test_el_descanso_vuelve_a_empezar_en_reparar(montaje: Montaje) -> None:
     montaje.abrir_descanso()
     assert montaje.flujo.seleccion_descanso is OpcionDescanso.REPARAR
     # Continuar se puede volver a pedir en el nuevo descanso.
-    montaje.pulsar(*[Accion.ABAJO] * 4, Accion.CONFIRMAR)
+    montaje.pulsar(*[Accion.ABAJO] * 6, Accion.CONFIRMAR)
     assert len(montaje.solicitudes) == 1
 
 

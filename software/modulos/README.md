@@ -88,6 +88,7 @@ Con la partida en pausa, los pasos 3 a 8 no se ejecutan.
 | EnemigoDestruido | id, posición | enemigos | oleadas, escena, hud, audio |
 | EstacionDanada | cantidad, integridad, máxima | estacion | escena, hud, audio |
 | IntegridadCambiada | actual, máxima | estacion | mejoras, hud |
+| EscudoCambiado | actual, máxima | estacion | mejoras, hud |
 | DesestabilizacionIniciada / DesestabilizacionTerminada | duración | estacion | vista, escena, hud |
 | AturdimientoIniciado / AturdimientoTerminado | duración | estacion | vista, armamento, hud, audio |
 | EstacionDestruida | oleadas superadas | estacion | flujo, enemigos, oleadas, entorno, escena, audio, historia |
@@ -101,6 +102,7 @@ Con la partida en pausa, los pasos 3 a 8 no se ejecutan.
 | PartidaGanada | nivel | oleadas | flujo, progreso, historia, audio |
 | PuntosObtenidos | obtenidos, disponibles, tiempo, tiempo de referencia | mejoras | hud |
 | ReparacionAplicada | cantidad | mejoras | estacion |
+| RegeneracionEscudoAplicada | cantidad | mejoras | estacion |
 | MejoraAplicada | mejora, nivel | mejoras | estacion, armamento, hud |
 | FondoCambiado | índice del fondo | entorno | escena |
 | EntornoCambiado | ninguno, niebla o destellos | entorno | escena, audio |

@@ -21,6 +21,13 @@ from atalaya.logica.nucleo.vectores import angulo_entre
 from atalaya.logica.parametros import Parametros
 from atalaya.logica.vista import Vista
 
+
+@pytest.fixture
+def parametros(parametros_efectos_fijos: Parametros) -> Parametros:
+    """Efectos con su duración de referencia, sin depender del escudo (RN-51)."""
+    return parametros_efectos_fijos
+
+
 #: Margen numérico para comparar ángulos calculados.
 _TOLERANCIA = 1e-6
 

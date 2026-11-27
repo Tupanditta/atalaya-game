@@ -16,6 +16,12 @@ from atalaya.logica.nucleo.eventos import (
 from atalaya.logica.parametros import Parametros
 
 
+@pytest.fixture
+def parametros(parametros_efectos_fijos: Parametros) -> Parametros:
+    """Efectos con su duración de referencia, sin depender del escudo (RN-51)."""
+    return parametros_efectos_fijos
+
+
 class MiraFija:
     """Mira de `vista` que siempre apunta en la misma dirección."""
 

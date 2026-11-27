@@ -149,10 +149,10 @@ def test_wasd_y_clic(parametros: Parametros) -> None:
     assert len(disparos) == 1
 
 
-def test_s4_aturdimiento_con_los_modulos_montados(parametros: Parametros) -> None:
+def test_s4_aturdimiento_con_los_modulos_montados(parametros_efectos_fijos: Parametros) -> None:
     """RN-13: un impacto aturdidor bloquea el giro y el disparo hasta que termina."""
     teclado = TecladoFalso()
-    juego = montar(parametros, teclado, semilla=2)
+    juego = montar(parametros_efectos_fijos, teclado, semilla=2)
     disparos: list[DisparoRealizado] = []
     juego.nucleo.bus.suscribir(DisparoRealizado, disparos.append)
     juego.flujo.iniciar_partida()

@@ -14,6 +14,8 @@ PISTA = color("#1A2638")
 AVISO = color("#FFB020")
 PELIGRO = color("#FF4D5E")
 INTEGRIDAD_ALTA = color("#3DDC84")
+#: Barra del escudo (RN-51).
+ESCUDO = color("#5B8CFF")
 FONDO_PANEL = color("#0A1220")
 VELO = color("#000000", 0.55)
 

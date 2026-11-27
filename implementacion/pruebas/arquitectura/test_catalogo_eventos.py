@@ -30,6 +30,7 @@ DATOS: dict[str, dict[str, object]] = {
     "EnemigoDestruido": {"id": int, "posicion": Vector3},
     "EstacionDanada": {"cantidad": float, "integridad": float, "maxima": float},
     "IntegridadCambiada": {"actual": float, "maxima": float},
+    "EscudoCambiado": {"actual": float, "maxima": float},
     "DesestabilizacionIniciada": {"duracion": float},
     "DesestabilizacionTerminada": {},
     "AturdimientoIniciado": {"duracion": float},
@@ -51,6 +52,7 @@ DATOS: dict[str, dict[str, object]] = {
         "tiempo_referencia": float,
     },
     "ReparacionAplicada": {"cantidad": float},
+    "RegeneracionEscudoAplicada": {"cantidad": float},
     "MejoraAplicada": {"mejora": Mejora, "nivel": int},
     "FondoCambiado": {"indice": int},
     "EntornoCambiado": {"entorno": Entorno},
@@ -83,7 +85,7 @@ def _clases() -> dict[str, type[Evento]]:
 def test_s0_t21_una_clase_por_evento() -> None:
     """S0-T21: existe una clase por evento del catálogo y ninguna más."""
     catalogo = _catalogo()
-    assert len(catalogo) == 38
+    assert len(catalogo) == 40
     assert set(_clases()) == catalogo
     assert set(DATOS) == catalogo
 

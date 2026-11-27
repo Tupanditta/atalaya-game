@@ -4,7 +4,7 @@ Crea los módulos, les pasa sus dependencias y ejecuta el bucle del núcleo. Es 
 sitio donde se conocen todos los módulos (`modulos/README.md`).
 """
 
-from dataclasses import dataclass, replace
+from dataclasses import dataclass
 
 from atalaya.logica.armamento import Armamento
 from atalaya.logica.enemigos import Enemigos
@@ -18,10 +18,6 @@ from atalaya.logica.parametros import Parametros, cargar
 from atalaya.logica.radar import Radar
 from atalaya.logica.vista import Vista
 from atalaya.presentacion.entrada import Entrada, FuenteRaton, FuenteTeclado
-
-#: PROVISIONAL, solo para probar a mano los fondos y el salto: el fondo cambia en cada
-#: oleada, repitiéndose en orden. Quitar (o poner a False) antes de entregar.
-PRUEBA_FONDO_CADA_OLEADA = True
 
 
 @dataclass(frozen=True)
@@ -94,8 +90,6 @@ def main() -> None:
     from atalaya.presentacion.hud import Hud
 
     parametros = cargar()
-    if PRUEBA_FONDO_CADA_OLEADA:
-        parametros = replace(parametros, oleadas=replace(parametros.oleadas, oleadas_por_fondo=1))
     base = crear_ventana()
     juego = montar(parametros, FuenteTecladoPanda(base), raton=FuenteRatonPanda(base))
     escena = Escena(base, juego.nucleo.bus, juego.vista, juego.enemigos, juego.entorno, parametros)

@@ -25,6 +25,13 @@ from atalaya.logica.nucleo.eventos import (
 from atalaya.logica.oleadas import Oleadas
 from atalaya.logica.parametros import Parametros
 
+
+@pytest.fixture
+def parametros(parametros_efectos_fijos: Parametros) -> Parametros:
+    """Efectos con su duración de referencia, sin depender del escudo (RN-51)."""
+    return parametros_efectos_fijos
+
+
 E = TypeVar("E", bound=Evento)
 
 

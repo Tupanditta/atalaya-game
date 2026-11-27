@@ -31,6 +31,12 @@ class Jugador:
     tiempo_apuntado: float
     #: Tiempo de vuelta de la mira y el zoom a su estado normal.
     tiempo_vuelta_mira: float
+    #: Escudo con el que empieza la partida, que reduce la duración de los efectos.
+    escudo_maximo: float
+    #: Porcentaje de escudo con el que los efectos duran su duración de referencia.
+    umbral_escudo: float
+    #: Fracción de la duración de referencia que dura un efecto con el escudo al 100 %.
+    factor_minimo_escudo: float
 
 
 @dataclass(frozen=True, slots=True)
@@ -63,8 +69,13 @@ class DatosTipo:
     dano: float
     #: Tiempo de recarga entre ataques.
     recarga: float
-    #: Duración del temblor o del aturdimiento; 0 si el tipo no tiene efecto.
+    #: Duración del temblor o del aturdimiento con el escudo en el umbral; 0 si el tipo
+    #: no tiene efecto.
     duracion_efecto: float
+    #: Duración del efecto con el escudo a 0.
+    duracion_efecto_maxima: float
+    #: Escudo que gasta cada proyectil del tipo al impactar.
+    desgaste_escudo: float
 
 
 @dataclass(frozen=True, slots=True)
@@ -151,7 +162,7 @@ class DatosMejora:
 
 @dataclass(frozen=True, slots=True)
 class Mejoras:
-    """Mejoras y reparación (RN-45, RN-46, RN-47)."""
+    """Mejoras, reparación y regeneración del escudo (RN-45, RN-46, RN-47, RN-51)."""
 
     #: Tiempo de referencia = base + por_enemigo × enemigos de la oleada.
     tiempo_referencia_base: float
@@ -164,7 +175,11 @@ class Mejoras:
     factor_tiempo_medio: float
     coste_reparacion: int
     cantidad_reparacion: float
+    coste_regeneracion: int
+    #: Escudo que devuelve una regeneración.
+    cantidad_regeneracion: float
     blindaje: DatosMejora
+    escudo: DatosMejora
     bateria: DatosMejora
     generador: DatosMejora
 
@@ -212,6 +227,25 @@ class Parametros:
         """Vida de un enemigo de `tamano` en el nivel de dificultad `nivel` (RN-22)."""
         _comprobar_nivel(nivel)
         return self.tamanos.de(tamano).vida * (1 + self.nivel.incremento_vida * (nivel - 1))
+
+    def duracion_efecto(self, tipo: TipoEnemigo, escudo: float) -> float:
+        """Duración del efecto de `tipo` con el escudo en la fracción `escudo` (RN-51).
+
+        `escudo` va de 0 (vacío) a 1 (lleno). En el umbral dura su duración de referencia;
+        por encima baja en línea recta hasta la fracción mínima con el escudo lleno, y por
+        debajo sube en línea recta hasta la duración máxima con el escudo vacío.
+        """
+        datos = self.tipos.de(tipo)
+        j = self.jugador
+        escudo = min(1.0, max(0.0, escudo))
+        umbral = j.umbral_escudo / 100
+        if escudo >= umbral:
+            avance = (escudo - umbral) / (1 - umbral)
+            factor = 1 - (1 - j.factor_minimo_escudo) * avance
+            return datos.duracion_efecto * factor
+        avance = (umbral - escudo) / umbral
+        aumento = datos.duracion_efecto_maxima - datos.duracion_efecto
+        return datos.duracion_efecto + aumento * avance
 
     def duracion_descanso(self, nivel: int) -> float:
         """Duración del descanso entre oleadas en el nivel `nivel` (RN-18, RN-22)."""

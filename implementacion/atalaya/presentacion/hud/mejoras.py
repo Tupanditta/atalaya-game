@@ -1,7 +1,7 @@
 """Pantalla de mejoras del descanso (`interfaz.md`, «Pantalla de mejoras»; CU-11).
 
 Panel centrado sobre la escena con el resultado de la oleada, los puntos disponibles, la
-integridad, las opciones con su coste y su nivel, y la cuenta atrás del descanso. El
+integridad, el escudo, las opciones con su coste y su nivel, y la cuenta atrás del descanso. El
 hueco de la transmisión de radio queda vacío hasta S8. Solo consulta a la lógica: qué
 hace cada opción lo decide `flujo`.
 """
@@ -33,6 +33,7 @@ from atalaya.presentacion.hud.estilo import (
     ALTO_DISENO,
     ANCHO_DISENO,
     AVISO,
+    ESCUDO,
     PISTA,
     TEXTO,
     TEXTO_SECUNDARIO,
@@ -55,21 +56,32 @@ _PANEL_X, _PANEL_Y, _PANEL_ANCHO, _PANEL_ALTO = 320, 160, 1280, 760
 _IZQUIERDA = 368
 _DERECHA = 1552
 
-#: Barra de integridad de la columna izquierda.
-_BARRA_X, _BARRA_Y, _BARRA_ANCHO, _BARRA_ALTO = 368, 764, 480, 10
+#: Barras de integridad y de escudo de la columna izquierda: línea base de la etiqueta;
+#: la barra va 12 px por debajo.
+_BARRA_X, _BARRA_ANCHO, _BARRA_ALTO = 368, 480, 10
+_INTEGRIDAD_Y, _ESCUDO_Y = 752, 812
+_BARRA_DY = 12
 
-#: Opciones de la columna derecha: borde superior de cada fila y su alto.
-_OPCION_X, _OPCION_ANCHO, _OPCION_ALTO = 912, 640, 88
+#: Opciones de la columna derecha: borde superior de cada fila y su alto. Seis filas de
+#: 72 px cada 80 px; «Continuar» va aparte, bajo una línea.
+_OPCION_X, _OPCION_ANCHO, _OPCION_ALTO = 912, 640, 72
 _FILAS = {
-    OpcionDescanso.REPARAR: 322,
-    OpcionDescanso.BLINDAJE: 422,
-    OpcionDescanso.BATERIA: 522,
-    OpcionDescanso.GENERADOR: 622,
-    OpcionDescanso.CONTINUAR: 742,
+    OpcionDescanso.REPARAR: 314,
+    OpcionDescanso.BLINDAJE: 394,
+    OpcionDescanso.REGENERAR: 474,
+    OpcionDescanso.ESCUDO: 554,
+    OpcionDescanso.BATERIA: 634,
+    OpcionDescanso.GENERADOR: 714,
+    OpcionDescanso.CONTINUAR: 806,
 }
+_SEPARADOR_CONTINUAR_Y = 798
+#: Línea base de cada texto, desde el borde superior de la fila.
+_TITULO_DY, _EFECTO_DY, _COSTE_DY, _MARCA_DY = 34, 60, 44, 46
 _TITULOS = {
     OpcionDescanso.REPARAR: "REPARAR",
     OpcionDescanso.BLINDAJE: "BLINDAJE",
+    OpcionDescanso.REGENERAR: "REGENERAR ESCUDO",
+    OpcionDescanso.ESCUDO: "ESCUDO",
     OpcionDescanso.BATERIA: "BATERÍA",
     OpcionDescanso.GENERADOR: "GENERADOR",
     OpcionDescanso.CONTINUAR: "CONTINUAR",
@@ -77,13 +89,15 @@ _TITULOS = {
 #: Efecto de cada nivel de mejora; la cifra sale de `parametros`.
 _EFECTOS = {
     Mejora.BLINDAJE: "integridad máxima",
+    Mejora.ESCUDO: "escudo máximo",
     Mejora.BATERIA: "energía máxima",
     Mejora.GENERADOR: "recarga de energía por segundo",
 }
 #: Opción no disponible: opacidad al 40 %.
 _OPACIDAD_NO_DISPONIBLE = 0.4
-#: Indicador de niveles: puntos de 10 px separados 18 px.
-_NIVELES_X, _RADIO_NIVEL, _PASO_NIVEL = 1300, 5, 18
+#: Indicador de niveles junto al título: puntos de 8 px separados 14 px. Diez niveles
+#: caben entre el título más largo con niveles y el coste.
+_NIVELES_X, _NIVELES_DY, _RADIO_NIVEL, _PASO_NIVEL = 1200, 25, 4, 14
 
 #: La cuenta atrás pasa a aviso con 5 s o menos.
 _CUENTA_ATRAS_AVISO = 5.0
@@ -112,7 +126,7 @@ def texto_coste(coste: int, motivo: Motivo | None) -> str:
     """Coste de una opción, o por qué no se puede comprar (`interfaz.md`)."""
     if motivo is Motivo.SIN_PUNTOS:
         return "SIN PUNTOS"
-    if motivo in (Motivo.NIVEL_MAXIMO, Motivo.INTEGRIDAD_MAXIMA):
+    if motivo in (Motivo.NIVEL_MAXIMO, Motivo.INTEGRIDAD_MAXIMA, Motivo.ESCUDO_MAXIMO):
         return "COMPLETO"
     return texto_puntos(coste)
 
@@ -186,16 +200,19 @@ class PantallaMejoras:
         panel(m, x, y, ancho, alto, e, relleno=_FONDO_PANEL, orden=_ORDEN_PANEL)
         lineas = capa(m, "lineas", _ORDEN_CONTENIDO)
         linea(lineas, [(_IZQUIERDA, 290), (_DERECHA, 290)], color("#2AD4FF", 0.25), 1, e)
-        linea(lineas, [(880, 320), (880, 860)], color("#2AD4FF", 0.15), 1, e)
-        linea(lineas, [(912, 736), (_DERECHA, 736)], color("#2AD4FF", 0.15), 1, e)
+        linea(lineas, [(880, 314), (880, 878)], color("#2AD4FF", 0.15), 1, e)
+        separador = [(912, _SEPARADOR_CONTINUAR_Y), (_DERECHA, _SEPARADOR_CONTINUAR_Y)]
+        linea(lineas, separador, color("#2AD4FF", 0.15), 1, e)
         a_derecha, a_centro = TextNode.A_right, TextNode.A_center
         self._texto(m, _DERECHA, 214, 16, "SIGUIENTE OLEADA EN", TEXTO_SECUNDARIO, a_derecha)
         self._cuenta_atras = Texto(m, self._fuente, _DERECHA, 262, 48, a_derecha, _ORDEN_TEXTO)
         self._texto(m, _IZQUIERDA, 496, 16, "RESULTADO", TEXTO_SECUNDARIO)
         self._texto(m, _IZQUIERDA, 596, 16, "PUNTOS DISPONIBLES", TEXTO_SECUNDARIO)
-        self._texto(m, _IZQUIERDA, 752, 16, "INTEGRIDAD", TEXTO_SECUNDARIO)
+        self._texto(m, _IZQUIERDA, _INTEGRIDAD_Y, 16, "INTEGRIDAD", TEXTO_SECUNDARIO)
+        self._texto(m, _IZQUIERDA, _ESCUDO_Y, 16, "ESCUDO", TEXTO_SECUNDARIO)
         pista = capa(m, "pista", _ORDEN_CONTENIDO)
-        rectangulo(pista, _BARRA_X, _BARRA_Y, _BARRA_ANCHO, _BARRA_ALTO, PISTA)
+        for y in (_INTEGRIDAD_Y, _ESCUDO_Y):
+            rectangulo(pista, _BARRA_X, y + _BARRA_DY, _BARRA_ANCHO, _BARRA_ALTO, PISTA)
         ayudas = "↑↓  Navegar   ·   Intro  Comprar   ·   Esc  Pausa"
         self._texto(m, ANCHO_DISENO / 2, 1029, 16, ayudas, TEXTO_SECUNDARIO, a_centro)
         self._contenido = None
@@ -210,9 +227,12 @@ class PantallaMejoras:
             m.resultado,
             tuple(m.nivel(mejora) for mejora in Mejora),
             m.motivo_reparar(),
+            m.motivo_regenerar_escudo(),
             tuple(m.motivo_mejorar(mejora) for mejora in Mejora),
             math.ceil(self._estacion.integridad - 1e-9),
             self._estacion.integridad_maxima,
+            math.ceil(self._estacion.escudo - 1e-9),
+            self._estacion.escudo_maximo,
             self._oleadas.numero,
         )
 
@@ -235,21 +255,25 @@ class PantallaMejoras:
             puntos = "+1 punto" if resultado.puntos == 1 else f"+{resultado.puntos} puntos"
             self._texto(c, x, 528, 20, puntos, ACENTO)
         self._texto(c, _IZQUIERDA, 676, 72, str(self._mejoras.puntos), ACENTO)
-        self._dibujar_integridad(c)
+        e = self._estacion
+        integridad, maxima = e.integridad, e.integridad_maxima
+        tono = color_integridad(max(0.0, min(1.0, integridad / maxima)))
+        self._dibujar_barra(c, "integridad", _INTEGRIDAD_Y, integridad, maxima, tono)
+        self._dibujar_barra(c, "escudo", _ESCUDO_Y, e.escudo, e.escudo_maximo, ESCUDO)
         for opcion in self._flujo.opciones_descanso:
             self._dibujar_opcion(c, opcion)
 
-    def _dibujar_integridad(self, padre: NodePath) -> None:
-        integridad = self._estacion.integridad
-        maxima = self._estacion.integridad_maxima
-        valor = f"{math.ceil(integridad - 1e-9)} / {maxima:g}"
-        self._texto(padre, _BARRA_X + _BARRA_ANCHO, 752, 20, valor, TEXTO, TextNode.A_right)
-        fraccion = max(0.0, min(1.0, integridad / maxima))
+    def _dibujar_barra(
+        self, padre: NodePath, nombre: str, y: float, actual: float, maxima: float, tono: Color
+    ) -> None:
+        """Valor a la altura de la etiqueta `y` y relleno de la barra que va debajo."""
+        valor = f"{math.ceil(actual - 1e-9)} / {maxima:g}"
+        self._texto(padre, _BARRA_X + _BARRA_ANCHO, y, 20, valor, TEXTO, TextNode.A_right)
+        fraccion = max(0.0, min(1.0, actual / maxima))
         if fraccion > 0:
-            relleno = capa(padre, "integridad", _ORDEN_CONTENIDO + 1)
+            relleno = capa(padre, nombre, _ORDEN_CONTENIDO + 1)
             ancho = fraccion * _BARRA_ANCHO
-            tono = color_integridad(fraccion)
-            rectangulo(relleno, _BARRA_X, _BARRA_Y, ancho, _BARRA_ALTO, tono)
+            rectangulo(relleno, _BARRA_X, y + _BARRA_DY, ancho, _BARRA_ALTO, tono)
 
     def _dibujar_opcion(self, padre: NodePath, opcion: OpcionDescanso) -> None:
         """Una fila: título, efecto, indicador de niveles y coste (`interfaz.md`)."""
@@ -261,31 +285,33 @@ class PantallaMejoras:
             rectangulo(fondo, _OPCION_X, y, _OPCION_ANCHO, _OPCION_ALTO, color("#2AD4FF", 0.14))
             rectangulo(fondo, _OPCION_X, y, 4, _OPCION_ALTO, ACENTO)
             marca = "\N{SINGLE RIGHT-POINTING ANGLE QUOTATION MARK}"
-            self._texto(fila, _DERECHA - 12, y + 52, 32, marca, TEXTO, TextNode.A_right)
+            self._texto(fila, _DERECHA - 12, y + _MARCA_DY, 28, marca, TEXTO, TextNode.A_right)
         titulo = TEXTO if seleccionada else TEXTO_SECUNDARIO
-        self._texto(fila, 940, y + 40, 32, _TITULOS[opcion], titulo)
+        self._texto(fila, 940, y + _TITULO_DY, 26, _TITULOS[opcion], titulo)
         m = self._mejoras
         motivo: Motivo | None
         if opcion is OpcionDescanso.CONTINUAR:
             siguiente = self._oleadas.numero + 1
-            self._texto(
-                fila, 940, y + 70, 18, f"Empezar ya la oleada {siguiente}", TEXTO_SECUNDARIO
-            )
+            texto = f"Empezar ya la oleada {siguiente}"
+            self._texto(fila, 940, y + _EFECTO_DY, 16, texto, TEXTO_SECUNDARIO)
             return
         if opcion is OpcionDescanso.REPARAR:
             efecto = f"+{m.cantidad_reparacion:g} integridad"
             coste, motivo = m.coste_reparacion, m.motivo_reparar()
+        elif opcion is OpcionDescanso.REGENERAR:
+            efecto = f"+{m.cantidad_regeneracion:g} escudo"
+            coste, motivo = m.coste_regeneracion, m.motivo_regenerar_escudo()
         else:
             mejora = MEJORA_DE_OPCION[opcion]
             efecto = f"+{m.efecto(mejora):g} {_EFECTOS[mejora]}"
             coste, motivo = m.coste(mejora), m.motivo_mejorar(mejora)
-            self._dibujar_niveles(fila, y + 44, m.nivel(mejora), m.nivel_maximo(mejora))
-        self._texto(fila, 940, y + 70, 18, efecto, TEXTO_SECUNDARIO)
+            nivel, maximo = m.nivel(mejora), m.nivel_maximo(mejora)
+            self._dibujar_niveles(fila, y + _NIVELES_DY, nivel, maximo)
+        self._texto(fila, 940, y + _EFECTO_DY, 16, efecto, TEXTO_SECUNDARIO)
         tono_coste = ACENTO if seleccionada else TEXTO_SECUNDARIO
         coste_x = _DERECHA - 40
-        self._texto(
-            fila, coste_x, y + 50, 22, texto_coste(coste, motivo), tono_coste, TextNode.A_right
-        )
+        coste_texto = texto_coste(coste, motivo)
+        self._texto(fila, coste_x, y + _COSTE_DY, 20, coste_texto, tono_coste, TextNode.A_right)
         if motivo is not None:
             fila.set_alpha_scale(_OPACIDAD_NO_DISPONIBLE)
 

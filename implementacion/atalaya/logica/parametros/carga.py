@@ -7,6 +7,7 @@ from collections.abc import Callable
 from pathlib import Path
 from typing import Any, TypeVar, get_type_hints
 
+from atalaya.logica.nucleo.dominio import TipoEnemigo
 from atalaya.logica.parametros.modelo import Parametros
 
 #: Versión del formato de `parametros.json` que entiende este código.
@@ -178,6 +179,25 @@ _RELACIONES: list[tuple[str, Callable[[Parametros], bool]]] = [
     (
         "oleadas.duracion_salto > 0",
         lambda p: p.oleadas.duracion_salto > 0,
+    ),
+    (
+        "jugador.escudo_maximo > 0",
+        lambda p: p.jugador.escudo_maximo > 0,
+    ),
+    (
+        "0 < jugador.umbral_escudo < 100",
+        lambda p: 0 < p.jugador.umbral_escudo < 100,
+    ),
+    (
+        "jugador.factor_minimo_escudo <= 1",
+        lambda p: p.jugador.factor_minimo_escudo <= 1,
+    ),
+    (
+        "tipos.*.duracion_efecto <= tipos.*.duracion_efecto_maxima",
+        lambda p: all(
+            p.tipos.de(t).duracion_efecto <= p.tipos.de(t).duracion_efecto_maxima
+            for t in TipoEnemigo
+        ),
     ),
 ]
 

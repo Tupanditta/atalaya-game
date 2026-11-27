@@ -38,6 +38,7 @@ class Mejora(Enum):
     """Mejoras de la estación (RN-47)."""
 
     BLINDAJE = "blindaje"
+    ESCUDO = "escudo"
     BATERIA = "bateria"
     GENERADOR = "generador"
 

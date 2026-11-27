@@ -1,7 +1,9 @@
 """Integridad de la estación y efectos de los ataques enemigos (`modulos/estacion.md`).
 
 Versión de S5: integridad, destrucción, desestabilización y aturdimiento, más la
-reparación (RN-46) y el blindaje (RN-47) que compra el jugador en el descanso.
+reparación (RN-46) y el blindaje (RN-47) que compra el jugador en el descanso. El
+escudo acorta o alarga los efectos según lo lleno que esté, y se gasta con los
+impactos que los causan; en el descanso se regenera y se expande (RN-51).
 """
 
 from atalaya.logica.nucleo.bus import Bus
@@ -11,6 +13,7 @@ from atalaya.logica.nucleo.eventos import (
     AturdimientoTerminado,
     DesestabilizacionIniciada,
     DesestabilizacionTerminada,
+    EscudoCambiado,
     EstacionDanada,
     EstacionDestruida,
     IntegridadCambiada,
@@ -18,6 +21,7 @@ from atalaya.logica.nucleo.eventos import (
     OleadaSuperada,
     PartidaIniciada,
     ProyectilImpacta,
+    RegeneracionEscudoAplicada,
     ReparacionAplicada,
 )
 from atalaya.logica.parametros.modelo import Parametros
@@ -41,9 +45,12 @@ class Estacion:
         self._oleadas_superadas = 0
         self._aturdimiento = 0.0
         self._desestabilizacion = 0.0
+        self._escudo_maximo = parametros.jugador.escudo_maximo
+        self._escudo = self._escudo_maximo
         bus.suscribir(ProyectilImpacta, self._al_impactar)
         bus.suscribir(OleadaSuperada, self._al_superar_oleada)
         bus.suscribir(ReparacionAplicada, self._al_reparar)
+        bus.suscribir(RegeneracionEscudoAplicada, self._al_regenerar_escudo)
         bus.suscribir(MejoraAplicada, self._al_mejorar)
         bus.suscribir(PartidaIniciada, self._al_iniciar_partida)
 
@@ -78,6 +85,16 @@ class Estacion:
     def destruida(self) -> bool:
         """Indica si la integridad ha llegado a cero en esta partida."""
         return self._destruida
+
+    @property
+    def escudo(self) -> float:
+        """Escudo actual, entre 0 y el máximo."""
+        return self._escudo
+
+    @property
+    def escudo_maximo(self) -> float:
+        """Escudo máximo."""
+        return self._escudo_maximo
 
     @property
     def aturdido(self) -> bool:
@@ -115,7 +132,11 @@ class Estacion:
         if self._integridad <= _TOLERANCIA:
             self._integridad = 0.0
         if self._integridad > 0:
-            self._aplicar_efecto(evento.tipo_enemigo, datos.duracion_efecto)
+            # La duración sale del escudo de antes del impacto; después se gasta (RN-51).
+            fraccion = self._escudo / self._escudo_maximo
+            duracion = self._parametros.duracion_efecto(evento.tipo_enemigo, fraccion)
+            self._aplicar_efecto(evento.tipo_enemigo, duracion)
+            self._gastar_escudo(datos.desgaste_escudo)
         self._bus.publicar(
             EstacionDanada(anterior - self._integridad, self._integridad, self._maxima)
         )
@@ -133,6 +154,22 @@ class Estacion:
             self._aturdimiento = duracion
             self._bus.publicar(AturdimientoIniciado(duracion))
 
+    def _gastar_escudo(self, desgaste: float) -> None:
+        """Resta `desgaste` al escudo sin bajar de cero (RN-51)."""
+        if desgaste <= 0 or self._escudo <= 0:
+            return
+        self._escudo = max(0.0, self._escudo - desgaste)
+        if self._escudo <= _TOLERANCIA:
+            self._escudo = 0.0
+        self._bus.publicar(EscudoCambiado(self._escudo, self._escudo_maximo))
+
+    def _al_regenerar_escudo(self, evento: RegeneracionEscudoAplicada) -> None:
+        """Suma la regeneración sin superar el escudo máximo (RN-51)."""
+        if self._destruida:
+            return
+        self._escudo = min(self._escudo_maximo, self._escudo + evento.cantidad)
+        self._bus.publicar(EscudoCambiado(self._escudo, self._escudo_maximo))
+
     def _al_reparar(self, evento: ReparacionAplicada) -> None:
         """Suma la reparación sin superar la integridad máxima (RN-46)."""
         if self._destruida:
@@ -141,14 +178,22 @@ class Estacion:
         self._bus.publicar(IntegridadCambiada(self._integridad, self._maxima))
 
     def _al_mejorar(self, evento: MejoraAplicada) -> None:
-        """El blindaje sube la integridad máxima y la actual con cada nivel (RN-47)."""
-        if evento.mejora is not Mejora.BLINDAJE or self._destruida:
+        """El blindaje sube la integridad máxima y la actual con cada nivel (RN-47); el
+        escudo, el escudo máximo y el actual (RN-51)."""
+        if self._destruida:
             return
-        efecto = self._parametros.mejoras.blindaje.efecto
-        maxima = self._parametros.jugador.integridad_maxima + efecto * evento.nivel
-        self._integridad += maxima - self._maxima
-        self._maxima = maxima
-        self._bus.publicar(IntegridadCambiada(self._integridad, self._maxima))
+        if evento.mejora is Mejora.BLINDAJE:
+            efecto = self._parametros.mejoras.blindaje.efecto
+            maxima = self._parametros.jugador.integridad_maxima + efecto * evento.nivel
+            self._integridad += maxima - self._maxima
+            self._maxima = maxima
+            self._bus.publicar(IntegridadCambiada(self._integridad, self._maxima))
+        elif evento.mejora is Mejora.ESCUDO:
+            efecto = self._parametros.mejoras.escudo.efecto
+            maxima = self._parametros.jugador.escudo_maximo + efecto * evento.nivel
+            self._escudo += maxima - self._escudo_maximo
+            self._escudo_maximo = maxima
+            self._bus.publicar(EscudoCambiado(self._escudo, self._escudo_maximo))
 
     def _al_superar_oleada(self, evento: OleadaSuperada) -> None:
         self._oleadas_superadas = evento.numero
@@ -164,4 +209,7 @@ class Estacion:
         self._oleadas_superadas = 0
         self._aturdimiento = 0.0
         self._desestabilizacion = 0.0
+        self._escudo_maximo = self._parametros.jugador.escudo_maximo
+        self._escudo = self._escudo_maximo
         self._bus.publicar(IntegridadCambiada(self._integridad, self._maxima))
+        self._bus.publicar(EscudoCambiado(self._escudo, self._escudo_maximo))

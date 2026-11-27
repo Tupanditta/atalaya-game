@@ -73,6 +73,10 @@ def test_s0_t11_valor_numerico_como_texto(datos_parametros: dict[str, Any]) -> N
         ),
         ("ataques", "distancia_maxima", 1200, "ataques.distancia_maxima < ataques.alcance_radar"),
         ("jugador", "mira_minima", 3, "jugador.mira_minima < jugador.mira_normal"),
+        ("jugador", "escudo_maximo", 0, "jugador.escudo_maximo > 0"),
+        ("jugador", "umbral_escudo", 0, "0 < jugador.umbral_escudo < 100"),
+        ("jugador", "umbral_escudo", 100, "0 < jugador.umbral_escudo < 100"),
+        ("jugador", "factor_minimo_escudo", 1.5, "jugador.factor_minimo_escudo <= 1"),
     ],
 )
 def test_s0_t12_relaciones(
@@ -83,6 +87,16 @@ def test_s0_t12_relaciones(
     with pytest.raises(ErrorParametros) as error:
         desde_datos(datos_parametros)
     assert relacion in str(error.value)
+
+
+def test_rn51_duracion_maxima_no_menor_que_la_de_referencia(
+    datos_parametros: dict[str, Any],
+) -> None:
+    """RN-51: con el escudo vacío, un efecto no puede durar menos que en el umbral."""
+    datos_parametros["tipos"]["aturdidor"]["duracion_efecto_maxima"] = 1
+    with pytest.raises(ErrorParametros) as error:
+        desde_datos(datos_parametros)
+    assert "tipos.*.duracion_efecto <= tipos.*.duracion_efecto_maxima" in str(error.value)
 
 
 @pytest.mark.parametrize(

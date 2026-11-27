@@ -31,7 +31,7 @@ Reglas del juego que el sistema debe respetar, independientes de la tecnología.
 ## Estado inicial
 
 ### RN-02. Inicio con recursos al máximo
-- **Regla:** Al empezar una partida, la energía y la integridad de la estación están al máximo, y la estación no tiene mejoras ni puntos de mejora (RN-49).
+- **Regla:** Al empezar una partida, la energía, la integridad y el escudo de la estación están al máximo, y la estación no tiene mejoras ni puntos de mejora (RN-49).
 - **Prioridad:** Media
 - **Origen:** Propuesta derivada de contexto.md
 - **Estado:** Confirmado
@@ -139,13 +139,13 @@ Reglas del juego que el sistema debe respetar, independientes de la tecnología.
 - **Estado:** Confirmado
 
 ### RN-12. Temblor por desestabilización
-- **Regla:** Un ataque desestabilizador hace temblar la pantalla y la mira durante un tiempo limitado. Mientras dura, la mira se desvía del centro y el disparo va hacia donde apunta la mira desviada.
+- **Regla:** Un ataque desestabilizador hace temblar la pantalla y la mira durante un tiempo limitado. Mientras dura, la mira se desvía del centro y el disparo va hacia donde apunta la mira desviada. La duración depende del escudo (RN-51).
 - **Prioridad:** Media
 - **Origen:** contexto.md, «Estabilidad de la pantalla»
 - **Estado:** Confirmado
 
 ### RN-13. Aturdimiento
-- **Regla:** Un ataque aturdidor aturde al jugador durante un tiempo limitado. Mientras dura el aturdimiento, el jugador no puede girar ni disparar.
+- **Regla:** Un ataque aturdidor aturde al jugador durante un tiempo limitado. Mientras dura el aturdimiento, el jugador no puede girar ni disparar. La duración depende del escudo (RN-51).
 - **Prioridad:** Media
 - **Origen:** contexto.md, «Estabilidad de la pantalla»; usuario
 - **Estado:** Confirmado
@@ -273,13 +273,13 @@ Reglas del juego que el sistema debe respetar, independientes de la tecnología.
 - **Estado:** Confirmado
 
 ### RN-47. Mejoras de la estación
-- **Regla:** Gastar puntos en una mejora sube un nivel una característica de la estación: blindaje (integridad máxima), batería (energía máxima) o generador (velocidad de recarga). Cada mejora tiene un número máximo de niveles.
+- **Regla:** Gastar puntos en una mejora sube un nivel una característica de la estación: blindaje (integridad máxima), escudo (escudo máximo, RN-51), batería (energía máxima) o generador (velocidad de recarga). Cada mejora tiene un número máximo de niveles.
 - **Prioridad:** Alta
 - **Origen:** Usuario; el catálogo de mejoras es decisión delegada
 - **Estado:** Confirmado
 
 ### RN-48. Mejoras solo entre oleadas
-- **Regla:** Las reparaciones y las mejoras solo pueden hacerse en la pantalla de mejoras, que está abierta durante el descanso entre oleadas. Durante una oleada no se puede reparar ni mejorar.
+- **Regla:** Las reparaciones, las regeneraciones del escudo y las mejoras solo pueden hacerse en la pantalla de mejoras, que está abierta durante el descanso entre oleadas. Durante una oleada no se puede reparar ni mejorar.
 - **Prioridad:** Alta
 - **Origen:** Usuario
 - **Estado:** Confirmado
@@ -288,6 +288,12 @@ Reglas del juego que el sistema debe respetar, independientes de la tecnología.
 - **Regla:** Los puntos y las mejoras solo duran la partida en curso. Una partida nueva empieza sin puntos ni mejoras, y no se guardan al cerrar el juego.
 - **Prioridad:** Media
 - **Origen:** Decisión delegada por el usuario
+- **Estado:** Confirmado
+
+### RN-51. Escudo
+- **Regla:** Además del blindaje, la estación tiene un escudo que reduce la duración de la desestabilización y del aturdimiento. Con el escudo lleno, los efectos apenas se notan; en el umbral duran su duración de referencia, y con el escudo vacío duran su duración máxima. Entre esos puntos, la duración cambia en línea recta. Cada impacto de un desestabilizador o de un aturdidor gasta escudo después de calcular la duración de su efecto; los impactos sin efecto no lo gastan. Durante el descanso, el jugador puede gastar puntos en regenerar escudo, sin superar el escudo máximo, y en expandirlo con la mejora de escudo, que sube el escudo máximo y el actual.
+- **Prioridad:** Alta
+- **Origen:** Usuario
 - **Estado:** Confirmado
 
 ## Nivel de dificultad
@@ -344,6 +350,9 @@ Valores de partida para implementar el juego y ajustarlo durante las pruebas. Ca
 | Tamaño mínimo de la mira | 0,5° | RN-38 |
 | Tiempo para llegar al tamaño mínimo | 1 s | RN-38 |
 | Tiempo de vuelta de la mira y el zoom a su estado normal | 0,2 s | RN-38 |
+| Escudo máximo | 100 | RN-51 |
+| Escudo: umbral con la duración de referencia de los efectos | 60 % | RN-51 |
+| Escudo: duración de los efectos con el escudo lleno | 10 % de la de referencia | RN-51 |
 
 ### Enemigos por tamaño
 
@@ -359,11 +368,11 @@ Con estas aceleraciones, cada enemigo tarda 0,5 s en pasar de parado a su veloci
 
 ### Enemigos por tipo
 
-| Tipo | Daño a la integridad | Tiempo de recarga | Efecto |
-|---|---|---|---|
-| Sin efecto especial | 3 | 1 s | ninguno |
-| Desestabilizador | 1 | 0,75 s | temblor durante 3 s |
-| Aturdidor | 2 | 2 s | aturdimiento durante 1,5 s |
+| Tipo | Daño a la integridad | Tiempo de recarga | Escudo gastado por impacto | Efecto |
+|---|---|---|---|---|
+| Sin efecto especial | 3 | 1 s | 0 | ninguno |
+| Desestabilizador | 1 | 0,75 s | 20 | temblor durante 3 s en el umbral del escudo y 10 s con el escudo vacío |
+| Aturdidor | 2 | 2 s | 20 | aturdimiento durante 1,5 s en el umbral del escudo y 5 s con el escudo vacío |
 
 ### Ataques y distancias
 
@@ -413,15 +422,17 @@ n es el número de la oleada (de 1 a 50).
 
 | Parámetro | Valor | Regla |
 |---|---|---|
-| Tiempo de referencia de una oleada | 10 s + 5 s × número de enemigos de la oleada | RN-45 |
-| Puntos por oleada | 3 si el tiempo es menor o igual que el de referencia; 2 si es menor o igual que el doble; 1 en otro caso | RN-45 |
+| Tiempo de referencia de una oleada | 15 s + 7,5 s × número de enemigos de la oleada | RN-45 |
+| Puntos por oleada | 5 si el tiempo es menor o igual que el de referencia; 2 si es menor o igual que el doble; 1 en otro caso | RN-45 |
 | Reparación | 1 punto devuelve 20 de integridad | RN-46 |
+| Regeneración del escudo | 1 punto devuelve 40 de escudo | RN-51 |
 
 | Mejora | Efecto por nivel | Niveles máximos | Coste por nivel |
 |---|---|---|---|
-| Blindaje | +10 de integridad máxima, y +10 de integridad actual | 5 | 2 puntos |
-| Batería | +10 de energía máxima | 5 | 2 puntos |
-| Generador | +1 de recarga de energía por segundo | 5 | 2 puntos |
+| Blindaje | +10 de integridad máxima, y +10 de integridad actual | 10 | 2 puntos |
+| Escudo | +20 de escudo máximo, y +20 de escudo actual | 10 | 2 puntos |
+| Batería | +10 de energía máxima | 10 | 2 puntos |
+| Generador | +1 de recarga de energía por segundo | 10 | 2 puntos |
 
 ### Nivel de dificultad
 

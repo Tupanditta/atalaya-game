@@ -62,6 +62,7 @@ from atalaya.presentacion.hud.estilo import (
     ANCHO_DISENO,
     AVISO,
     COLOR_TIPO,
+    ESCUDO,
     FONDO_PANEL,
     PISTA,
     TEXTO,
@@ -83,9 +84,11 @@ _ORDEN_CONTACTOS = 5
 _ORDEN_MIRA = 6
 
 #: Panel de estado de la estación (`interfaz/03-oleada.svg`).
-_PANEL_X, _PANEL_Y, _PANEL_ANCHO, _PANEL_ALTO = 1440, 912, 432, 120
+#: Con el escudo (RN-51), el panel crece hacia arriba una fila de 50 px.
+_PANEL_X, _PANEL_Y, _PANEL_ANCHO, _PANEL_ALTO = 1440, 862, 432, 170
 _BARRA_X, _BARRA_ANCHO, _BARRA_ALTO = 1464, 384, 10
-_INTEGRIDAD_Y = 956
+_INTEGRIDAD_Y = 906
+_ESCUDO_Y = 956
 _ENERGIA_Y = 1006
 
 #: Panel de oleada, centrado arriba.
@@ -255,6 +258,7 @@ class Hud:
         self._desde_sin_energia = math.inf
         self._energia = _Barra(self._derecha, _ENERGIA_Y)
         self._integridad = _Barra(self._derecha, _INTEGRIDAD_Y)
+        self._escudo = _Barra(self._derecha, _ESCUDO_Y)
         self._estaticos: list[NodePath] = []
         self._textos: dict[str, Texto] = {}
         self._pantalla_mejoras = PantallaMejoras(
@@ -329,6 +333,7 @@ class Hud:
         self._clave_sector = None
         self._energia.olvidar()
         self._integridad.olvidar()
+        self._escudo.olvidar()
         for pantalla in (
             self._pantalla_mejoras,
             self._menu_principal,
@@ -348,7 +353,7 @@ class Hud:
         self._estaticos = [derecha, centro, izquierda]
         e = self._escala
         panel(derecha, _PANEL_X, _PANEL_Y, _PANEL_ANCHO, _PANEL_ALTO, e)
-        for y in (_INTEGRIDAD_Y, _ENERGIA_Y):
+        for y in (_INTEGRIDAD_Y, _ESCUDO_Y, _ENERGIA_Y):
             rectangulo(derecha, _BARRA_X, y, _BARRA_ANCHO, _BARRA_ALTO, PISTA)
         panel(centro, _OLEADA_X, _OLEADA_Y, _OLEADA_ANCHO, _OLEADA_ALTO, e)
         self._crear_fondo_radar(izquierda)
@@ -365,6 +370,8 @@ class Hud:
         self._textos = {
             "integridad": Texto(derecha, f, _BARRA_X, _INTEGRIDAD_Y - 10, 16),
             "integridad_valor": Texto(derecha, f, fin_barra, _INTEGRIDAD_Y - 10, 20, a_derecha),
+            "escudo": Texto(derecha, f, _BARRA_X, _ESCUDO_Y - 10, 16),
+            "escudo_valor": Texto(derecha, f, fin_barra, _ESCUDO_Y - 10, 20, a_derecha),
             "energia": Texto(derecha, f, _BARRA_X, _ENERGIA_Y - 10, 16),
             "energia_valor": Texto(derecha, f, fin_barra, _ENERGIA_Y - 10, 20, a_derecha),
             # Sobre la barra de energía, entre su etiqueta y su valor.
@@ -382,6 +389,7 @@ class Hud:
             texto.mostrar(f"{alcance * k / 3:g}", TEXTO_SECUNDARIO)
         self._textos["radar"].mostrar("RADAR", TEXTO_SECUNDARIO)
         self._textos["integridad"].mostrar("INTEGRIDAD", TEXTO_SECUNDARIO)
+        self._textos["escudo"].mostrar("ESCUDO", TEXTO_SECUNDARIO)
         self._textos["energia"].mostrar("ENERGÍA", TEXTO_SECUNDARIO)
 
     def _crear_fondo_radar(self, padre: NodePath) -> None:
@@ -511,6 +519,11 @@ class Hud:
         self._integridad.dibujar(integridad, maxima, tono, 0, dt)
         valor = f"{math.ceil(integridad - 1e-9)} / {maxima:g}"
         self._textos["integridad_valor"].mostrar(valor, TEXTO)
+        escudo = self._estacion.escudo
+        escudo_maximo = self._estacion.escudo_maximo
+        self._escudo.dibujar(escudo, escudo_maximo, ESCUDO, 0, dt)
+        valor_escudo = f"{math.ceil(escudo - 1e-9)} / {escudo_maximo:g}"
+        self._textos["escudo_valor"].mostrar(valor_escudo, TEXTO)
         self._textos["nivel"].mostrar(f"NIVEL {self._flujo.nivel}", ACENTO)
 
         energia = self._armamento.energia
@@ -608,3 +621,4 @@ class Hud:
         self._desde_sin_energia = math.inf
         self._energia.mostrada = None
         self._integridad.mostrada = None
+        self._escudo.mostrada = None

@@ -87,6 +87,8 @@ class OpcionDescanso(Enum):
 
     REPARAR = "reparar"
     BLINDAJE = "blindaje"
+    REGENERAR = "regenerar"
+    ESCUDO = "escudo"
     BATERIA = "bateria"
     GENERADOR = "generador"
     CONTINUAR = "continuar"
@@ -136,6 +138,7 @@ class SeccionManual(Enum):
 MEJORA_DE_OPCION: Mapping[OpcionDescanso, Mejora] = MappingProxyType(
     {
         OpcionDescanso.BLINDAJE: Mejora.BLINDAJE,
+        OpcionDescanso.ESCUDO: Mejora.ESCUDO,
         OpcionDescanso.BATERIA: Mejora.BATERIA,
         OpcionDescanso.GENERADOR: Mejora.GENERADOR,
     }
@@ -387,6 +390,8 @@ class Flujo:
         motivo: Motivo | None
         if opcion is OpcionDescanso.REPARAR:
             motivo = self._mejoras.reparar()
+        elif opcion is OpcionDescanso.REGENERAR:
+            motivo = self._mejoras.regenerar_escudo()
         else:
             motivo = self._mejoras.mejorar(MEJORA_DE_OPCION[opcion])
         self._sonar(SonidoMenu.CONFIRMAR if motivo is None else SonidoMenu.ERROR)

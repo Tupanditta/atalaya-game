@@ -19,6 +19,7 @@ from atalaya.logica.nucleo.eventos import (
     PartidaIniciada,
     ProyectilImpacta,
     PuntosObtenidos,
+    RegeneracionEscudoAplicada,
     ReparacionAplicada,
 )
 from atalaya.logica.parametros import Parametros
@@ -37,7 +38,13 @@ class Montaje:
         self.mejoras = Mejoras(self.bus, parametros)
         self.armamento = Armamento(self.bus, parametros, Vista(self.bus, parametros))
         self.eventos: list[Evento] = []
-        for tipo in (PuntosObtenidos, ReparacionAplicada, MejoraAplicada, IntegridadCambiada):
+        for tipo in (
+            PuntosObtenidos,
+            ReparacionAplicada,
+            RegeneracionEscudoAplicada,
+            MejoraAplicada,
+            IntegridadCambiada,
+        ):
             self.bus.suscribir(tipo, self.eventos.append)
         self.bus.publicar(PartidaIniciada(1))
         self.bus.entregar()
@@ -83,9 +90,9 @@ def montaje(parametros: Parametros) -> Montaje:
 
 
 def test_s5_t03_rn45_puntos_segun_el_tiempo(parametros: Parametros) -> None:
-    """S5-T03 RN-45: 3 enemigos (referencia 25 s) en 25, 25,01, 50, 50,01 y 500 s."""
+    """S5-T03 RN-45: 3 enemigos (referencia 37,5 s) en 37,5, 37,51, 75, 75,01 y 750 s."""
     referencia = tiempo_referencia(parametros, 3)
-    assert referencia == pytest.approx(25)
+    assert referencia == pytest.approx(37.5)
     m = parametros.mejoras
     medio = referencia * m.factor_tiempo_medio
     casos = [
@@ -95,7 +102,7 @@ def test_s5_t03_rn45_puntos_segun_el_tiempo(parametros: Parametros) -> None:
         (medio + 0.01, m.puntos_lento),
         (referencia * 20, m.puntos_lento),
     ]
-    assert [p for _, p in casos] == [3, 2, 2, 1, 1]
+    assert [p for _, p in casos] == [5, 2, 2, 1, 1]
     for tiempo, puntos in casos:
         assert puntos_oleada(parametros, tiempo, 3) == puntos
         montaje = Montaje(parametros)
@@ -117,22 +124,22 @@ def test_s5_t04_rf43_puntos_obtenidos(montaje: Montaje, parametros: Parametros) 
     montaje.bus.publicar(OleadaSuperada(4, 30.0, 5))
     montaje.bus.entregar()
     referencia = tiempo_referencia(parametros, 5)
-    assert referencia == pytest.approx(35)
-    assert montaje.de(PuntosObtenidos) == [PuntosObtenidos(3, 3, 30.0, referencia)]
+    assert referencia == pytest.approx(52.5)
+    assert montaje.de(PuntosObtenidos) == [PuntosObtenidos(5, 5, 30.0, referencia)]
     resultado = montaje.mejoras.resultado
     assert resultado is not None
-    assert (resultado.numero, resultado.tiempo, resultado.puntos) == (4, 30.0, 3)
+    assert (resultado.numero, resultado.tiempo, resultado.puntos) == (4, 30.0, 5)
     assert resultado.tiempo_referencia == referencia
 
 
 def test_s5_t05_rn45_los_puntos_se_acumulan(montaje: Montaje, parametros: Parametros) -> None:
-    """S5-T05 RN-45: 3 puntos y después 2 sin gastar dan 5 disponibles."""
+    """S5-T05 RN-45: 5 puntos y después 2 sin gastar dan 7 disponibles."""
     referencia = tiempo_referencia(parametros, 3)
     montaje.bus.publicar(OleadaSuperada(1, referencia, 3))
     montaje.bus.publicar(OleadaSuperada(2, referencia * 1.5, 3))
     montaje.bus.entregar()
-    assert montaje.mejoras.puntos == 5
-    assert [e.disponibles for e in montaje.de(PuntosObtenidos)] == [3, 5]
+    assert montaje.mejoras.puntos == 7
+    assert [e.disponibles for e in montaje.de(PuntosObtenidos)] == [5, 7]
 
 
 # --- reparación ----------------------------------------------------------------------
@@ -227,20 +234,20 @@ def test_s5_t09_rn47_blindaje(montaje: Montaje) -> None:
 
 
 def test_s5_t10_rn47_nivel_maximo(montaje: Montaje) -> None:
-    """S5-T10 RN-47: el blindaje se compra 5 veces; la sexta no hace nada."""
-    montaje.ganar_puntos(15)
+    """S5-T10 RN-47: el blindaje se compra 10 veces; la undécima no hace nada."""
+    montaje.ganar_puntos(25)
     montaje.abrir_descanso()
-    for _ in range(5):
+    for _ in range(10):
         assert montaje.mejoras.mejorar(Mejora.BLINDAJE) is None
         montaje.bus.entregar()
     assert montaje.mejoras.nivel(Mejora.BLINDAJE) == montaje.mejoras.nivel_maximo(Mejora.BLINDAJE)
-    assert montaje.mejoras.nivel(Mejora.BLINDAJE) == 5
+    assert montaje.mejoras.nivel(Mejora.BLINDAJE) == 10
     assert montaje.mejoras.mejorar(Mejora.BLINDAJE) is Motivo.NIVEL_MAXIMO
     montaje.bus.entregar()
     assert montaje.mejoras.puntos == 5
-    assert montaje.estacion.integridad_maxima == 150
-    assert montaje.estacion.integridad == 150
-    assert len(montaje.de(MejoraAplicada)) == 5
+    assert montaje.estacion.integridad_maxima == 200
+    assert montaje.estacion.integridad == 200
+    assert len(montaje.de(MejoraAplicada)) == 10
 
 
 def test_s5_t11_rn47_bateria(montaje: Montaje) -> None:
@@ -303,10 +310,10 @@ def test_s5_t15_opciones_disponibles(montaje: Montaje) -> None:
     assert m.motivo_reparar() is None
     assert {m.motivo_mejorar(x) for x in Mejora} == {Motivo.SIN_PUNTOS}
     # Con 2 puntos: todo; con el blindaje al máximo, el blindaje no.
-    montaje.ganar_puntos(11)
+    montaje.ganar_puntos(21)
     assert m.motivo_reparar() is None
     assert {m.motivo_mejorar(x) for x in Mejora} == {None}
-    for _ in range(5):
+    for _ in range(10):
         m.mejorar(Mejora.BLINDAJE)
     montaje.bus.entregar()
     assert m.motivo_mejorar(Mejora.BLINDAJE) is Motivo.NIVEL_MAXIMO
@@ -322,6 +329,69 @@ def test_s5_t15_opciones_disponibles(montaje: Montaje) -> None:
     montaje.bus.entregar()
     assert m.motivo_reparar() is Motivo.FUERA_DEL_DESCANSO
     assert {m.motivo_mejorar(x) for x in Mejora} == {Motivo.FUERA_DEL_DESCANSO}
+
+
+# --- escudo --------------------------------------------------------------------------
+
+
+def _gastar_escudo(montaje: Montaje, impactos: int) -> None:
+    for _ in range(impactos):
+        montaje.bus.publicar(ProyectilImpacta(TipoEnemigo.ATURDIDOR))
+    montaje.bus.entregar()
+
+
+def test_rn51_regenerar_escudo(montaje: Montaje) -> None:
+    """RN-51: cada regeneración cuesta 1 punto y devuelve 40, sin pasar del máximo."""
+    _gastar_escudo(montaje, 3)
+    assert montaje.estacion.escudo == 40
+    montaje.ganar_puntos(3)
+    montaje.abrir_descanso()
+    assert montaje.mejoras.regenerar_escudo() is None
+    montaje.bus.entregar()
+    assert montaje.estacion.escudo == 80
+    assert montaje.mejoras.regenerar_escudo() is None
+    montaje.bus.entregar()
+    assert montaje.estacion.escudo == 100
+    assert montaje.mejoras.regenerar_escudo() is Motivo.ESCUDO_MAXIMO
+    assert montaje.mejoras.puntos == 1
+    assert montaje.de(RegeneracionEscudoAplicada) == [RegeneracionEscudoAplicada(40)] * 2
+
+
+def test_rn51_dos_regeneraciones_en_el_mismo_paso(montaje: Montaje) -> None:
+    """La segunda regeneración ve el escudo que dejará la primera, antes de confirmarlo."""
+    _gastar_escudo(montaje, 1)
+    montaje.ganar_puntos(3)
+    montaje.abrir_descanso()
+    assert montaje.mejoras.regenerar_escudo() is None
+    assert montaje.mejoras.regenerar_escudo() is Motivo.ESCUDO_MAXIMO
+    assert montaje.mejoras.puntos == 2
+
+
+def test_rn51_motivos_de_regenerar(montaje: Montaje) -> None:
+    """Fuera del descanso, con el escudo lleno o sin puntos no se regenera."""
+    m = montaje.mejoras
+    assert m.motivo_regenerar_escudo() is Motivo.FUERA_DEL_DESCANSO
+    montaje.abrir_descanso()
+    assert m.motivo_regenerar_escudo() is Motivo.ESCUDO_MAXIMO
+    _gastar_escudo(montaje, 1)
+    assert m.motivo_regenerar_escudo() is Motivo.SIN_PUNTOS
+    assert m.regenerar_escudo() is Motivo.SIN_PUNTOS
+    montaje.bus.entregar()
+    assert montaje.de(RegeneracionEscudoAplicada) == []
+    assert (m.coste_regeneracion, m.cantidad_regeneracion) == (1, 40)
+
+
+def test_rn51_expandir_escudo(montaje: Montaje) -> None:
+    """RN-51: la mejora de escudo sube 20 el máximo y el actual, hasta 10 niveles."""
+    montaje.ganar_puntos(21)
+    montaje.abrir_descanso()
+    for _ in range(10):
+        assert montaje.mejoras.mejorar(Mejora.ESCUDO) is None
+    assert montaje.mejoras.mejorar(Mejora.ESCUDO) is Motivo.NIVEL_MAXIMO
+    montaje.bus.entregar()
+    assert (montaje.estacion.escudo, montaje.estacion.escudo_maximo) == (300, 300)
+    assert montaje.mejoras.motivo_regenerar_escudo() is Motivo.ESCUDO_MAXIMO
+    assert montaje.mejoras.puntos == 1
 
 
 def test_consultas_de_costes_y_niveles(montaje: Montaje, parametros: Parametros) -> None:

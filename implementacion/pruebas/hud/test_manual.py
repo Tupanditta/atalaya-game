@@ -40,9 +40,12 @@ def test_cu10_tipos_de_enemigo(parametros: Parametros) -> None:
     assert sin_efecto["Recarga"] == "1 s"
     assert sin_efecto["Efecto"] == "ninguno"
     aturdidor = _filas(tarjetas[TipoEnemigo.ATURDIDOR])
-    assert aturdidor["Efecto"] == "no puedes girar\nni disparar 1,5 s"
+    assert aturdidor["Efecto"] == "no puedes girar ni\ndisparar 0,15 a 5 s"
+    desestabilizador = _filas(tarjetas[TipoEnemigo.DESESTABILIZADOR])
+    assert desestabilizador["Efecto"] == "pantalla y mira\ntiemblan 0,3 a 10 s"
     assert aturdidor["Aparece desde"] == "oleada 10"
     assert "0,3 s antes de disparar" in notas_enemigos(parametros)[0]
+    assert "al 60 % duran 3 s y 1,5 s" in notas_enemigos(parametros)[2]
 
 
 def test_cu10_a1_vida_segun_el_nivel(parametros: Parametros) -> None:
@@ -68,9 +71,16 @@ def test_cu10_controles_entornos_y_mejoras(parametros: Parametros) -> None:
     assert niebla[0] == "NIEBLA"
     assert any("250 u" in r for r in niebla[1])
     assert any("1,5 s" in r for r in destellos[1])
-    reparar, blindaje, *_ = filas_mejoras(parametros)
+    reparar, blindaje, regenerar, escudo, *_ = filas_mejoras(parametros)
     assert reparar == ("REPARAR", "+20 integridad, sin pasar del máximo", "1 punto", "sin límite")
-    assert blindaje == ("BLINDAJE", "+10 integridad máxima por nivel", "2 puntos", "5")
+    assert blindaje == ("BLINDAJE", "+10 integridad máxima por nivel", "2 puntos", "10")
+    assert regenerar == (
+        "REGENERAR ESCUDO",
+        "+40 escudo, sin pasar del máximo",
+        "1 punto",
+        "sin límite",
+    )
+    assert escudo == ("ESCUDO", "+20 escudo máximo por nivel", "2 puntos", "10")
 
 
 def test_s6_m03_el_manual_sigue_a_los_parametros(datos_parametros: dict[str, Any]) -> None:

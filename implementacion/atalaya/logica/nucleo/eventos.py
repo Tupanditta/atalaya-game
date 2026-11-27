@@ -113,6 +113,12 @@ class IntegridadCambiada(Evento):
 
 
 @dataclass(frozen=True, slots=True)
+class EscudoCambiado(Evento):
+    actual: float
+    maxima: float
+
+
+@dataclass(frozen=True, slots=True)
 class DesestabilizacionIniciada(Evento):
     duracion: float
 
@@ -203,6 +209,11 @@ class PuntosObtenidos(Evento):
 
 @dataclass(frozen=True, slots=True)
 class ReparacionAplicada(Evento):
+    cantidad: float
+
+
+@dataclass(frozen=True, slots=True)
+class RegeneracionEscudoAplicada(Evento):
     cantidad: float
 
 

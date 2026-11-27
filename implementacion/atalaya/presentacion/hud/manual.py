@@ -68,11 +68,13 @@ _NOMBRES_TAMANO = {Tamano.PEQUENO: "PEQUEÑO", Tamano.MEDIANO: "MEDIANO", Tamano
 _DIFICULTADES = ("difícil", "media", "fácil")
 _NOMBRES_MEJORA = {
     Mejora.BLINDAJE: "BLINDAJE",
+    Mejora.ESCUDO: "ESCUDO",
     Mejora.BATERIA: "BATERÍA",
     Mejora.GENERADOR: "GENERADOR",
 }
 _EFECTOS_MEJORA = {
     Mejora.BLINDAJE: "integridad máxima",
+    Mejora.ESCUDO: "escudo máximo",
     Mejora.BATERIA: "energía máxima",
     Mejora.GENERADOR: "recarga de energía por segundo",
 }
@@ -115,11 +117,14 @@ def notas_controles(p: Parametros) -> list[str]:
     ]
 
 
-def _efecto_tipo(tipo: TipoEnemigo, duracion: float) -> str:
+def _efecto_tipo(p: Parametros, tipo: TipoEnemigo) -> str:
+    """Efecto del tipo con su duración, del escudo lleno al vacío (RN-51)."""
+    minima = cifra(round(p.duracion_efecto(tipo, 1.0), 2))
+    maxima = cifra(p.duracion_efecto(tipo, 0.0))
     if tipo is TipoEnemigo.DESESTABILIZADOR:
-        return f"pantalla y mira\ntiemblan {cifra(duracion)} s"
+        return f"pantalla y mira\ntiemblan {minima} a {maxima} s"
     if tipo is TipoEnemigo.ATURDIDOR:
-        return f"no puedes girar\nni disparar {cifra(duracion)} s"
+        return f"no puedes girar ni\ndisparar {minima} a {maxima} s"
     return "ninguno"
 
 
@@ -137,7 +142,7 @@ def tarjetas_enemigos(p: Parametros) -> list[tuple[TipoEnemigo, Tarjeta]]:
             ("Daño", cifra(datos.dano)),
             ("Recarga", f"{cifra(datos.recarga)} s"),
             ("Aparece desde", f"oleada {desde[tipo]}"),
-            ("Efecto", _efecto_tipo(tipo, datos.duracion_efecto)),
+            ("Efecto", _efecto_tipo(p, tipo)),
         )
         tarjetas.append((tipo, Tarjeta(_NOMBRES_TIPO[tipo], filas)))
     return tarjetas
@@ -149,7 +154,20 @@ def notas_enemigos(p: Parametros) -> list[str]:
         f"Todos los enemigos avisan con un destello y un sonido de carga {aviso} s "
         "antes de disparar.",
         "Si los destruyes durante el aviso, no llegan a disparar.",
+        _nota_escudo(p),
     ]
+
+
+def _nota_escudo(p: Parametros) -> str:
+    """Cómo cambia el escudo la duración de los efectos (RN-51)."""
+    j = p.jugador
+    desestabilizacion = cifra(p.tipos.desestabilizador.duracion_efecto)
+    aturdimiento = cifra(p.tipos.aturdidor.duracion_efecto)
+    desgaste = cifra(p.tipos.desestabilizador.desgaste_escudo)
+    return (
+        f"El escudo acorta los efectos: al {cifra(j.umbral_escudo)} % duran "
+        f"{desestabilizacion} s y {aturdimiento} s. Cada impacto con efecto gasta {desgaste}."
+    )
 
 
 def tarjetas_tamanos(p: Parametros, nivel: int) -> list[tuple[Tamano, Tarjeta]]:
@@ -213,7 +231,10 @@ def notas_entornos(p: Parametros) -> list[str]:
 
 
 def filas_mejoras(p: Parametros) -> list[tuple[str, str, str, str]]:
-    """Nombre, efecto, coste y niveles de la reparación y de cada mejora (RN-46, RN-47)."""
+    """Nombre, efecto, coste y niveles de cada opción del descanso (RN-46, RN-47, RN-51).
+
+    En el mismo orden que la pantalla de mejoras: la regeneración, tras el blindaje.
+    """
     m = p.mejoras
     filas = [
         (
@@ -229,6 +250,13 @@ def filas_mejoras(p: Parametros) -> list[tuple[str, str, str, str]]:
         filas.append(
             (_NOMBRES_MEJORA[mejora], efecto, _puntos(datos.coste), str(datos.niveles_maximos))
         )
+    regenerar = (
+        "REGENERAR ESCUDO",
+        f"+{cifra(m.cantidad_regeneracion)} escudo, sin pasar del máximo",
+        _puntos(m.coste_regeneracion),
+        "sin límite",
+    )
+    filas.insert(2, regenerar)
     return filas
 
 
@@ -400,9 +428,10 @@ class PantallaManual(PantallaMenu):
         columnas = (_IZQUIERDA + 24, _IZQUIERDA + 280, _IZQUIERDA + 1040, _IZQUIERDA + 1220)
         for x, cabecera in zip(columnas, ("OPCIÓN", "EFECTO", "COSTE", "NIVELES"), strict=True):
             self._texto(padre, x, 352, 16, cabecera, TEXTO_SECUNDARIO)
+        # Seis filas de 58 px cada 70 px: la última acaba antes de las notas.
         for k, fila in enumerate(filas_mejoras(self._parametros)):
-            y = 376 + 80 * k
-            self._caja(padre, _IZQUIERDA, y, _DERECHA - _IZQUIERDA, 64)
+            y = 376 + 70 * k
+            self._caja(padre, _IZQUIERDA, y, _DERECHA - _IZQUIERDA, 58)
             for i, (x, valor) in enumerate(zip(columnas, fila, strict=True)):
                 tono = TEXTO if i == 0 else TEXTO_SECUNDARIO if i == 1 else ACENTO
-                self._texto(padre, x, y + 41, 24 if i == 0 else 20, valor, tono)
+                self._texto(padre, x, y + 37, 24 if i == 0 else 20, valor, tono)
