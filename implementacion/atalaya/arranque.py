@@ -51,7 +51,7 @@ def montar(
     estacion = Estacion(nucleo.bus, parametros)
     mejoras = Mejoras(nucleo.bus, parametros)
     radar = Radar(parametros, vista, enemigos)
-    flujo = Flujo(nucleo.bus, entrada, vista, armamento, mejoras)
+    flujo = Flujo(nucleo.bus, entrada, vista, armamento, mejoras, nucleo)
     nucleo.registrar(Etapa.ENTRADA, entrada)
     nucleo.registrar(Etapa.FLUJO, flujo)
     nucleo.registrar(Etapa.VISTA, vista)
@@ -105,7 +105,7 @@ def main() -> None:
         audio.actualizar()
         return Task.cont
 
-    juego.flujo.iniciar_partida(nivel=1)
+    # El juego empieza en el menú principal (RF-34).
     base.taskMgr.add(fotograma, "atalaya-fotograma")
     base.run()
 

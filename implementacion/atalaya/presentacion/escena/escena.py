@@ -1,10 +1,12 @@
 """Ventana y escena 3D (`modulos/escena.md`).
 
-Versión de S4: ventana a pantalla completa, cámara orientada según `vista`, fondo 1,
+Versión de S6: ventana a pantalla completa, cámara orientada según `vista`, fondo 1,
 enemigos con el modelo y el color de su tipo y la escala de su tamaño, su destello de
 aviso, proyectiles, rayo del disparo, destello de impacto, explosión básica, daño
-recibido (temblor y tinte rojo) y temblor continuo por desestabilización. Los entornos y
-los cambios de fondo llegan en sprints posteriores.
+recibido (temblor y tinte rojo) y temblor continuo por desestabilización. Con la partida
+en pausa, la escena queda congelada y oscurecida; sin partida en curso (menú principal y
+resumen), el fondo gira muy despacio. Los entornos y los cambios de fondo llegan en
+sprints posteriores.
 """
 
 import math
@@ -12,9 +14,11 @@ import math
 from direct.showbase.ShowBase import ShowBase
 from panda3d.core import (
     AmbientLight,
+    CardMaker,
     DirectionalLight,
     NodePath,
     Quat,
+    TransparencyAttrib,
     Vec3,
     WindowProperties,
     load_prc_file_data,
@@ -31,6 +35,7 @@ from atalaya.logica.nucleo.eventos import (
     EstacionDestruida,
     PartidaAbandonada,
     PartidaIniciada,
+    PausaCambiada,
 )
 from atalaya.logica.parametros import Parametros
 from atalaya.logica.vista import Vista, interpolar
@@ -74,6 +79,15 @@ _EVENTOS = (
 #: Destello de aviso de disparo, en radios del enemigo: crece durante el aviso (RN-34).
 _AVISO_TAMANO_INICIAL = 1.5
 _AVISO_TAMANO_FINAL = 6.0
+
+#: Velo de pausa: negro al 55 % que se oscurece en 150 ms (`interfaz.md`, secciones 3 y 8).
+_OPACIDAD_VELO = 0.55
+_APARICION_VELO = 0.15
+#: Orden de dibujo del velo en `render2d`: encima de los tintes de la escena y debajo del HUD.
+_ORDEN_VELO = -4
+
+#: Giro del fondo sin partida en curso, en grados por segundo: «muy despacio».
+_GIRO_MENU = 1.5
 
 
 def crear_ventana() -> ShowBase:
@@ -134,8 +148,18 @@ class Escena:
         self._dano = DanoRecibido(base.render2d)
         self._efectos: list[Efecto] = []
         self._eventos: list[Evento] = []
+        self._velo = self._crear_velo()
+        self._en_pausa = False
+        self._velo_mostrado = 0.0
+        self._en_partida = False
+        self._rumbo_menu = 0.0
+        self._cabeceo_menu = 0.0
         for tipo in _EVENTOS:
             bus.suscribir(tipo, self._anotar)
+        bus.suscribir(PausaCambiada, self._al_cambiar_pausa)
+        bus.suscribir(PartidaIniciada, self._al_iniciar_partida)
+        bus.suscribir(PartidaAbandonada, self._al_terminar_partida)
+        bus.suscribir(EstacionDestruida, self._al_terminar_partida)
 
     def _anotar(self, evento: Evento) -> None:
         """Guarda el evento para convertirlo en efectos en el siguiente fotograma."""
@@ -147,19 +171,63 @@ class Escena:
         `fraccion` es la parte del paso siguiente ya transcurrida, entre 0 y 1; `dt` es
         el tiempo real desde el fotograma anterior, para animar los efectos.
         """
+        self._mostrar_velo(dt)
+        # En pausa todo queda congelado: los efectos no avanzan.
+        dt_escena = 0.0 if self._en_pausa else dt
         v = self._vista
-        q = interpolar(v.orientacion_anterior, v.orientacion, fraccion)
-        # Panda3D usa la misma convención de ejes que la lógica (x derecha, y delante,
-        # z arriba), así que el cuaternión se pasa tal cual.
-        self._base.camera.set_quat(Quat(q.w, q.x, q.y, q.z))
-        self._temblar(v.desvio)
+        if self._en_partida:
+            q = interpolar(v.orientacion_anterior, v.orientacion, fraccion)
+            # Panda3D usa la misma convención de ejes que la lógica (x derecha, y delante,
+            # z arriba), así que el cuaternión se pasa tal cual.
+            self._base.camera.set_quat(Quat(q.w, q.x, q.y, q.z))
+            self._temblar(v.desvio)
+        else:
+            self._rumbo_menu = (self._rumbo_menu - _GIRO_MENU * dt) % 360
+            self._base.camera.set_hpr(self._rumbo_menu, self._cabeceo_menu, 0)
         self._ajustar_lente(v.campo_vision)
         # Los efectos nuevos aparecen en este mismo fotograma (RNF-05).
         self._procesar_eventos()
-        self._dano.avanzar(dt, self._base.camera)
+        self._dano.avanzar(dt_escena, self._base.camera)
         self._colocar_enemigos(fraccion)
         self._colocar_proyectiles(fraccion)
-        self._efectos = [e for e in self._efectos if e.avanzar(dt)]
+        self._efectos = [e for e in self._efectos if e.avanzar(dt_escena)]
+
+    # --- pausa y menú ----------------------------------------------------------------
+
+    def _crear_velo(self) -> NodePath:
+        """Velo negro a pantalla completa que oscurece la escena en pausa."""
+        tarjeta = CardMaker("velo-pausa")
+        tarjeta.set_frame(-1, 1, -1, 1)
+        velo = self._base.render2d.attach_new_node(tarjeta.generate())
+        velo.set_color(0, 0, 0, 1)
+        velo.set_transparency(TransparencyAttrib.M_alpha)
+        velo.set_depth_test(False)
+        velo.set_depth_write(False)
+        velo.set_bin("fixed", _ORDEN_VELO)
+        velo.hide()
+        return velo
+
+    def _mostrar_velo(self, dt: float) -> None:
+        """Oscurece la escena en 150 ms al pausar; al reanudar, el velo se quita."""
+        if not self._en_pausa:
+            self._velo_mostrado = 0.0
+            self._velo.hide()
+            return
+        self._velo_mostrado = min(1.0, self._velo_mostrado + dt / _APARICION_VELO)
+        self._velo.show()
+        self._velo.set_alpha_scale(_OPACIDAD_VELO * self._velo_mostrado)
+
+    def _al_cambiar_pausa(self, evento: PausaCambiada) -> None:
+        self._en_pausa = evento.activa
+
+    def _al_iniciar_partida(self, evento: PartidaIniciada) -> None:
+        self._en_partida = True
+
+    def _al_terminar_partida(self, evento: Evento) -> None:
+        """Sin partida, el fondo gira despacio desde donde miraba la cámara."""
+        self._en_partida = False
+        self._rumbo_menu = self._base.camera.get_h()
+        self._cabeceo_menu = self._base.camera.get_p()
 
     # --- enemigos --------------------------------------------------------------------
 

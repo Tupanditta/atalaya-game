@@ -195,8 +195,7 @@ class PantallaMejoras:
         self._texto(m, _IZQUIERDA, 752, 16, "INTEGRIDAD", TEXTO_SECUNDARIO)
         pista = capa(m, "pista", _ORDEN_CONTENIDO)
         rectangulo(pista, _BARRA_X, _BARRA_Y, _BARRA_ANCHO, _BARRA_ALTO, PISTA)
-        # Provisional hasta S6: sin pausa, Esc cierra el juego.
-        ayudas = "↑↓  Navegar   ·   Intro  Comprar   ·   Esc  Salir del juego"
+        ayudas = "↑↓  Navegar   ·   Intro  Comprar   ·   Esc  Pausa"
         self._texto(m, ANCHO_DISENO / 2, 1029, 16, ayudas, TEXTO_SECUNDARIO, a_centro)
         self._contenido = None
         self._clave = None

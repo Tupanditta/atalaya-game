@@ -2,9 +2,10 @@
 
 Versión mínima, sin sonido posicional: disparo, aviso, impacto, explosión, falta de
 energía y alarma de daño (S3), aturdimiento (S4) y los sonidos de los menús: mover,
-confirmar y error (S5). Los sonidos se generan al arrancar (`sintesis.py`) y se guardan en
-un disco virtual en memoria, así que no hay archivos de sonido en disco. El sonido
-posicional, la radio y la música llegan en sprints posteriores.
+confirmar y error (S5). Al pausar la partida se detienen todos los sonidos de partida;
+los de los menús siguen sonando (S6). Los sonidos se generan al arrancar (`sintesis.py`)
+y se guardan en un disco virtual en memoria, así que no hay archivos de sonido en disco.
+El sonido posicional, la radio y la música llegan en sprints posteriores.
 """
 
 from collections.abc import Callable
@@ -26,6 +27,7 @@ from atalaya.logica.nucleo.eventos import (
     EstacionDestruida,
     PartidaAbandonada,
     PartidaIniciada,
+    PausaCambiada,
 )
 from atalaya.logica.parametros import Parametros
 from atalaya.presentacion.audio import sintesis
@@ -104,6 +106,7 @@ class Audio:
             bus.suscribir(tipo, partial(self._al_evento, nombre))
         for tipo in (PartidaIniciada, PartidaAbandonada, EstacionDestruida):
             bus.suscribir(tipo, self._callar_avisos)
+        bus.suscribir(PausaCambiada, self._al_cambiar_pausa)
 
     def actualizar(self) -> None:
         """Una vez por fotograma: suena cada respuesta de los menús desde el anterior."""
@@ -122,6 +125,16 @@ class Audio:
         indice = self._siguiente[nombre]
         self._siguiente[nombre] = (indice + 1) % len(copias)
         copias[indice].play()
+
+    def _al_cambiar_pausa(self, evento: PausaCambiada) -> None:
+        """En pausa no suena ningún efecto de la partida (CU-09); los menús, sí."""
+        if not evento.activa:
+            return
+        menu = set(_SONIDO_MENU.values())
+        for nombre, copias in self._sonidos.items():
+            if nombre not in menu:
+                for sonido in copias:
+                    sonido.stop()
 
     def _callar_avisos(self, evento: Evento) -> None:
         """Al empezar o terminar la partida no queda ningún aviso sonando."""

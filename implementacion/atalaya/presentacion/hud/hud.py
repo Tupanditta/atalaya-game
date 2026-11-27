@@ -1,9 +1,14 @@
 """HUD de la partida (`modulos/hud.md`, `interfaz/interfaz.md`, sección 6).
 
-Versión de S5: la mira, que sigue al ratón, el radar con el símbolo y el color de cada
+Versión de S6: la mira, que sigue al ratón, el radar con el símbolo y el color de cada
 tipo y tamaño, las barras de integridad y energía, el nivel, el panel de oleada, el
-aviso de aturdimiento, la pantalla de mejoras del descanso (`mejoras.py`) y el resumen
-mínimo de derrota. Las transmisiones y los menús llegan en sprints posteriores.
+aviso de aturdimiento, la pantalla de mejoras del descanso (`mejoras.py`), el menú
+principal, la pausa con sus confirmaciones y el resumen de derrota (`menus.py`) y el
+manual (`manual.py`). La selección de nivel, la victoria y las transmisiones llegan en
+sprints posteriores.
+
+Qué pantalla se dibuja lo decide `flujo`. El HUD de la partida se oculta en el menú
+principal y en el manual, y queda atenuado bajo la pausa.
 
 La mira desviada por desestabilización (RN-12) no se desplaza en la pantalla: `escena`
 gira la imagen con el desvío de `vista`, así que la mira queda desviada respecto a la
@@ -45,23 +50,18 @@ from atalaya.presentacion.hud.estilo import (
     ALTO_DISENO,
     ANCHO_DISENO,
     AVISO,
+    COLOR_TIPO,
     FONDO_PANEL,
-    PELIGRO,
     PISTA,
     TEXTO,
     TEXTO_SECUNDARIO,
-    VELO,
     color_integridad,
+    forma_contacto,
 )
+from atalaya.presentacion.hud.manual import PantallaManual
 from atalaya.presentacion.hud.mejoras import PantallaMejoras
+from atalaya.presentacion.hud.menus import PantallaMenuPrincipal, PantallaPausa, PantallaResumen
 from atalaya.presentacion.hud.mira import Mira
-
-#: Color de cada tipo de enemigo y de sus proyectiles (`interfaz.md`, sección 3).
-COLOR_TIPO: dict[TipoEnemigo, Color] = {
-    TipoEnemigo.SIN_EFECTO: color("#FF4D5E"),
-    TipoEnemigo.DESESTABILIZADOR: color("#FFD23F"),
-    TipoEnemigo.ATURDIDOR: color("#B36BFF"),
-}
 
 #: Orden de dibujo de cada capa del HUD (`dibujo.capa`): las mayores, encima.
 _ORDEN_PISTA = 2
@@ -69,8 +69,6 @@ _ORDEN_RELLENO = 3
 _ORDEN_MARCAS = 4
 _ORDEN_CONTACTOS = 5
 _ORDEN_MIRA = 6
-_ORDEN_VELO = 60
-_ORDEN_TEXTO_VELO = 70
 
 #: Panel de estado de la estación (`interfaz/03-oleada.svg`).
 _PANEL_X, _PANEL_Y, _PANEL_ANCHO, _PANEL_ALTO = 1440, 912, 432, 120
@@ -106,6 +104,18 @@ _OPACIDAD_VINETA_ATURDIDO = 0.3
 #: Orden de dibujo de la viñeta: debajo del HUD, encima de la escena.
 _ORDEN_VINETA = -5
 
+#: Pantallas en las que se ve el HUD de la partida, y en las que queda atenuado.
+_CON_HUD = (
+    Pantalla.OLEADA_EN_CURSO,
+    Pantalla.DESCANSO,
+    Pantalla.PAUSA,
+    Pantalla.CONFIRMACION,
+    Pantalla.RESUMEN,
+)
+_HUD_ATENUADO = (Pantalla.PAUSA, Pantalla.CONFIRMACION)
+#: Opacidad del HUD de la partida bajo la pausa (`07-pausa.svg`).
+_OPACIDAD_ATENUADO = 0.6
+
 
 def radio_mira_en_pantalla(radio: float, campo_vision: float) -> float:
     """Radio de la mira en píxeles de diseño (`interfaz.md`, «Mira»)."""
@@ -119,17 +129,6 @@ def posicion_en_radar(contacto: Contacto) -> Punto:
     r = _RADAR_RADIO * contacto.distancia_relativa
     angulo = math.radians(contacto.angulo)
     return cx + r * math.sin(angulo), cy - r * math.cos(angulo)
-
-
-def forma_contacto(tipo: TipoEnemigo, centro: Punto, lado: float) -> list[Punto]:
-    """Círculo, triángulo o rombo según el tipo, para distinguirlo también sin color."""
-    x, y = centro
-    m = lado / 2
-    if tipo is TipoEnemigo.DESESTABILIZADOR:
-        return [(x, y - m), (x + m, y + m), (x - m, y + m)]
-    if tipo is TipoEnemigo.ATURDIDOR:
-        return [(x, y - m), (x + m, y), (x, y + m), (x - m, y)]
-    return circulo(centro, m, 20)[:-1]
 
 
 def texto_aturdimiento(restante: float) -> str:
@@ -214,7 +213,6 @@ class Hud:
         self._sector: NodePath | None = None
         self._clave_sector: float | None = None
         self._contactos: NodePath | None = None
-        self._velo: NodePath | None = None
         self._desde_sin_energia = math.inf
         self._energia = _Barra(self._derecha, _ENERGIA_Y)
         self._integridad = _Barra(self._derecha, _INTEGRIDAD_Y)
@@ -223,6 +221,11 @@ class Hud:
         self._pantalla_mejoras = PantallaMejoras(
             self._raiz, self._fuente, mejoras, estacion, oleadas, flujo
         )
+        f = self._fuente
+        self._menu_principal = PantallaMenuPrincipal(self._raiz, f, flujo)
+        self._pausa = PantallaPausa(self._raiz, f, flujo)
+        self._manual = PantallaManual(self._raiz, f, flujo, parametros)
+        self._resumen = PantallaResumen(self._raiz, f, flujo, parametros)
         bus.suscribir(DisparoRealizado, self._al_disparar)
         bus.suscribir(DisparoSinEnergia, self._al_disparar_sin_energia)
         bus.suscribir(PartidaIniciada, self._al_iniciar_partida)
@@ -233,17 +236,32 @@ class Hud:
         self._tiempo += dt
         self._desde_sin_energia += dt
         pantalla = self._flujo.pantalla
-        derrota = pantalla is Pantalla.RESUMEN
-        descanso = pantalla is Pantalla.DESCANSO
-        aturdido = self._estacion.aturdido and not derrota
-        # En el descanso no se apunta: la mira solo se ve durante la oleada.
-        self._dibujar_mira(not (derrota or descanso), aturdido, dt)
-        self._dibujar_radar()
-        self._dibujar_estado(dt)
-        self._dibujar_oleada()
-        self._dibujar_aturdimiento(aturdido)
-        self._pantalla_mejoras.dibujar(descanso, self._escala, self._ancho_diseno, dt)
-        self._dibujar_resumen(derrota)
+        oleada = pantalla is Pantalla.OLEADA_EN_CURSO
+        self._mostrar_hud_partida(pantalla)
+        # La mira y el aturdimiento solo se ven con la oleada en marcha: en el descanso no
+        # se apunta, y en la pausa el apuntado queda cancelado.
+        self._dibujar_mira(oleada, oleada and self._estacion.aturdido, dt)
+        if pantalla in _CON_HUD:
+            self._dibujar_radar()
+            self._dibujar_estado(dt)
+            self._dibujar_oleada()
+        self._dibujar_aturdimiento(oleada and self._estacion.aturdido)
+        e, ancho = self._escala, self._ancho_diseno
+        self._pantalla_mejoras.dibujar(pantalla is Pantalla.DESCANSO, e, ancho, dt)
+        self._menu_principal.dibujar(pantalla is Pantalla.MENU_PRINCIPAL, e, ancho, dt)
+        self._pausa.dibujar(pantalla in _HUD_ATENUADO, e, ancho, dt)
+        self._manual.dibujar(pantalla is Pantalla.MANUAL, e, ancho, dt)
+        self._resumen.dibujar(pantalla is Pantalla.RESUMEN, e, ancho, dt)
+
+    def _mostrar_hud_partida(self, pantalla: Pantalla) -> None:
+        """Sin partida a la vista no hay HUD; bajo la pausa se ve atenuado."""
+        opacidad = _OPACIDAD_ATENUADO if pantalla in _HUD_ATENUADO else 1.0
+        for anclaje in (self._izquierda, self._centro, self._derecha):
+            if pantalla in _CON_HUD:
+                anclaje.show()
+                anclaje.set_alpha_scale(opacidad)
+            else:
+                anclaje.hide()
 
     # --- escala y anclajes -----------------------------------------------------------
 
@@ -264,10 +282,14 @@ class Hud:
         self._clave_sector = None
         self._energia.olvidar()
         self._integridad.olvidar()
-        self._pantalla_mejoras.olvidar()
-        if self._velo is not None:
-            self._velo.remove_node()
-            self._velo = None
+        for pantalla in (
+            self._pantalla_mejoras,
+            self._menu_principal,
+            self._pausa,
+            self._manual,
+            self._resumen,
+        ):
+            pantalla.olvidar()
 
     def _crear_estaticos(self) -> None:
         """Paneles, pistas, el fondo del radar y los textos; cuelgan de nodos fijos."""
@@ -464,34 +486,6 @@ class Hud:
         self._vineta.show()
         texto = texto_aturdimiento(self._estacion.tiempo_aturdimiento)
         self._textos["aturdimiento"].mostrar(texto, COLOR_TIPO[TipoEnemigo.ATURDIDOR])
-
-    # --- resumen de derrota ----------------------------------------------------------
-
-    def _dibujar_resumen(self, visible: bool) -> None:
-        """Resumen mínimo de derrota (`interfaz.md`, «Fin de partida»), sin menú todavía."""
-        if not visible:
-            if self._velo is not None:
-                self._velo.remove_node()
-                self._velo = None
-            return
-        if self._velo is not None:
-            return
-        self._velo = capa(self._raiz, "resumen", _ORDEN_VELO)
-        rectangulo(self._velo, 0, 0, self._ancho_diseno, ALTO_DISENO, VELO)
-        textos = self._velo.attach_new_node("textos")
-        textos.set_x((self._ancho_diseno - ANCHO_DISENO) / 2)
-        f, centro, x = self._fuente, TextNode.A_center, ANCHO_DISENO / 2
-        o = _ORDEN_TEXTO_VELO
-        total = self._parametros.oleadas.numero_oleadas
-        lineas = [
-            (440, 96, "ESTACIÓN PERDIDA", PELIGRO),
-            (500, 24, "La Atalaya ha caído.", TEXTO),
-            (580, 22, f"OLEADAS SUPERADAS  {self._flujo.oleadas_superadas} / {total}", TEXTO),
-            (620, 22, f"NIVEL  {self._flujo.nivel}", TEXTO),
-            (1032, 16, "Intro  Volver a jugar   ·   Esc  Salir del juego", TEXTO_SECUNDARIO),
-        ]
-        for y, tamano, contenido, tono in lineas:
-            Texto(textos, f, x, y, tamano, centro, o).mostrar(contenido, tono)
 
     # --- eventos ---------------------------------------------------------------------
 

@@ -53,7 +53,9 @@ class Montaje:
         self.armamento = Armamento(bus, parametros, self.vista)
         self.estacion = Estacion(bus, parametros)
         self.mejoras = Mejoras(bus, parametros)
-        self.flujo = Flujo(bus, self.acciones, self.vista, self.armamento, self.mejoras)
+        self.flujo = Flujo(
+            bus, self.acciones, self.vista, self.armamento, self.mejoras, self.nucleo
+        )
         self.nucleo.registrar(Etapa.FLUJO, self.flujo)
         self.nucleo.registrar(Etapa.VISTA, self.vista)
         self.nucleo.registrar(Etapa.ARMAMENTO, self.armamento)
@@ -180,13 +182,6 @@ def test_la_barra_pulsada_al_acabar_la_oleada_no_dispara(montaje: Montaje) -> No
     montaje.acciones.mantenidas = set()
     montaje.avanzar(5)
     assert disparos == []
-
-
-def test_esc_en_el_descanso_pide_salir(montaje: Montaje) -> None:
-    """Provisional hasta S6: en el descanso, Esc pide cerrar el juego."""
-    montaje.abrir_descanso()
-    montaje.pulsar(Accion.PAUSA)
-    assert montaje.flujo.salir_solicitado
 
 
 def test_el_descanso_vuelve_a_empezar_en_reparar(montaje: Montaje) -> None:

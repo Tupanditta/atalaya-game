@@ -35,7 +35,7 @@ class AccionesFalsas:
 
 def _flujo(nucleo: Nucleo, parametros: Parametros, acciones: AccionesFalsas, vista: Vista) -> Flujo:
     armamento = Armamento(nucleo.bus, parametros, vista)
-    return Flujo(nucleo.bus, acciones, vista, armamento, Mejoras(nucleo.bus, parametros))
+    return Flujo(nucleo.bus, acciones, vista, armamento, Mejoras(nucleo.bus, parametros), nucleo)
 
 
 def _montar(parametros: Parametros) -> tuple[Nucleo, Flujo, Vista, AccionesFalsas]:
@@ -64,7 +64,7 @@ def test_iniciar_partida(parametros: Parametros) -> None:
     recibidos: list[PartidaIniciada] = []
     nucleo.bus.suscribir(PartidaIniciada, recibidos.append)
     flujo = _flujo(nucleo, parametros, AccionesFalsas(), Vista(nucleo.bus, parametros))
-    assert flujo.pantalla is None
+    assert flujo.pantalla is Pantalla.MENU_PRINCIPAL
     flujo.iniciar_partida(nivel=3)
     nucleo.bus.entregar()
     assert flujo.pantalla is Pantalla.OLEADA_EN_CURSO
@@ -116,23 +116,13 @@ def test_s1_t03_rn26_flechas_opuestas(
         assert _cerca(vista.adelante, ADELANTE)
 
 
-def test_esc_pide_salir(parametros: Parametros) -> None:
-    """Provisional hasta S6: Esc durante la oleada pide cerrar el juego."""
-    nucleo, flujo, _, acciones = _montar(parametros)
-    _pasos(nucleo, 1)
-    assert not flujo.salir_solicitado
-    acciones.pulsadas = {Accion.PAUSA}
-    _pasos(nucleo, 1)
-    assert flujo.salir_solicitado
-
-
 def test_barra_espaciadora_llega_a_armamento(parametros: Parametros) -> None:
     """Durante la oleada, mantener la barra espaciadora hace apuntar a armamento (RN-38)."""
     nucleo = Nucleo(semilla=1)
     acciones = AccionesFalsas()
     vista = Vista(nucleo.bus, parametros)
     armamento = Armamento(nucleo.bus, parametros, vista)
-    flujo = Flujo(nucleo.bus, acciones, vista, armamento, Mejoras(nucleo.bus, parametros))
+    flujo = Flujo(nucleo.bus, acciones, vista, armamento, Mejoras(nucleo.bus, parametros), nucleo)
     nucleo.registrar(Etapa.FLUJO, flujo)
     nucleo.registrar(Etapa.ARMAMENTO, armamento)
     flujo.iniciar_partida()
@@ -151,7 +141,7 @@ def _montar_con_armamento(
     acciones = AccionesFalsas()
     vista = Vista(nucleo.bus, parametros)
     armamento = Armamento(nucleo.bus, parametros, vista)
-    flujo = Flujo(nucleo.bus, acciones, vista, armamento, Mejoras(nucleo.bus, parametros))
+    flujo = Flujo(nucleo.bus, acciones, vista, armamento, Mejoras(nucleo.bus, parametros), nucleo)
     nucleo.registrar(Etapa.FLUJO, flujo)
     nucleo.registrar(Etapa.VISTA, vista)
     nucleo.registrar(Etapa.ARMAMENTO, armamento)
@@ -207,14 +197,16 @@ def test_resumen_intro_vuelve_a_jugar(parametros: Parametros) -> None:
     assert flujo.oleadas_superadas == 0
 
 
-def test_resumen_esc_pide_salir(parametros: Parametros) -> None:
-    """Provisional hasta S6: en el resumen, Esc pide cerrar el juego."""
+def test_resumen_esc_no_hace_nada(parametros: Parametros) -> None:
+    """En el resumen, Esc no pausa ni cierra el juego: solo valen sus opciones."""
     nucleo, flujo, _, _, acciones = _montar_con_armamento(parametros)
     nucleo.bus.publicar(EstacionDestruida(oleadas_superadas=0))
     _pasos(nucleo, 1)
     acciones.pulsadas = {Accion.PAUSA}
     _pasos(nucleo, 1)
-    assert flujo.salir_solicitado
+    assert flujo.pantalla is Pantalla.RESUMEN
+    assert not flujo.salir_solicitado
+    assert not nucleo.en_pausa
 
 
 def test_raton_mueve_la_mira(parametros: Parametros) -> None:

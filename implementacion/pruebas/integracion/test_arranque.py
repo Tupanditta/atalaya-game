@@ -53,14 +53,16 @@ def test_rnf02_respuesta_en_el_mismo_paso(parametros: Parametros) -> None:
     assert juego.vista.orientacion == girada
 
 
-def test_esc_cierra_el_juego(parametros: Parametros) -> None:
-    """Provisional hasta S6: Esc pide cerrar el juego."""
+def test_esc_pausa_la_partida(parametros: Parametros) -> None:
+    """CU-09: con los módulos montados, Esc pausa la partida y detiene el reloj."""
     teclado = TecladoFalso()
     juego = montar(parametros, teclado, semilla=1)
     juego.flujo.iniciar_partida()
     teclado.teclas = {"escape"}
     juego.nucleo.avanzar(PASO)
-    assert juego.flujo.salir_solicitado
+    assert juego.flujo.pantalla is Pantalla.PAUSA
+    assert juego.nucleo.en_pausa
+    assert not juego.flujo.salir_solicitado
 
 
 def test_s2_partida_con_enemigos_y_disparo(parametros: Parametros) -> None:
