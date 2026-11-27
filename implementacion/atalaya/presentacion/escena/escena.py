@@ -63,11 +63,14 @@ from atalaya.presentacion.escena.efectos import (
     textura_anillo,
     textura_brillo,
 )
+from atalaya.presentacion.escena.estrellas import CapaEstrellas
 from atalaya.presentacion.escena.fondo import Fondos, cubo_de_cielo
 from atalaya.presentacion.escena.modelos import COLOR_TIPO, modelo_enemigo
 from atalaya.presentacion.escena.paisaje import Paisaje
 from atalaya.presentacion.escena.planetas import PAISAJES
 from atalaya.presentacion.escena.salto import SaltoHiperespacial
+from atalaya.presentacion.escena.sol import Deslumbramiento
+from atalaya.presentacion.escena.sombreado import Sombreado
 
 #: Resolución si el sistema no informa de la de la pantalla (`design.md`, sección 6).
 ANCHO = 1920
@@ -179,7 +182,11 @@ class Escena:
         self._sol = self._iluminar()
         self._brillo = textura_brillo()
         self._anillo = textura_anillo()
-        self._paisaje = Paisaje(self._espacio, self._brillo)
+        # Shaders compilados al crear la escena; sin tarjeta gráfica, el aspecto de siempre.
+        self._sombreado = Sombreado(self._gsg())
+        self._paisaje = Paisaje(self._espacio, self._brillo, self._sombreado)
+        self._estrellas = CapaEstrellas(self._espacio, self._brillo, self._sombreado)
+        self._deslumbramiento = Deslumbramiento(self._espacio, base.render2d, self._sombreado)
         self._poner_fondo(entorno.fondo)
         self._salto = SaltoHiperespacial(base.camera, base.render2d, self._espacio, self._brillo)
         self._modelos: dict[int, NodePath] = {}
@@ -244,8 +251,12 @@ class Escena:
         # Los efectos nuevos aparecen en este mismo fotograma (RNF-05).
         self._procesar_eventos()
         self._paisaje.avanzar(dt_escena)
+        self._estrellas.avanzar(dt_escena)
         self._salto.avanzar(dt_escena, self._base.camera)
         self._ajustar_lente(v.campo_vision + self._salto.apertura)
+        self._deslumbramiento.avanzar(
+            dt_escena, self._base.camera, self._base.camLens, self._base.get_aspect_ratio()
+        )
         self._dano.avanzar(dt_escena, self._base.camera)
         self._sacudida.avanzar(dt_escena, self._base.camera)
         self._colocar_enemigos(fraccion)
@@ -310,6 +321,8 @@ class Escena:
         """Muestra el cielo y el paisaje del fondo `indice`, con la luz de su sol."""
         self._fondo.set_texture(self._fondos.textura(indice), 1)
         self._paisaje.mostrar(indice, self._fondos.texturas_planetas(indice))
+        self._estrellas.mostrar(indice)
+        self._deslumbramiento.mostrar(indice)
         paisaje = PAISAJES[indice - 1]
         # Los enemigos se iluminan desde el mismo sol que los planetas.
         self._sol.node().set_color((*(0.9 * c for c in paisaje.luz_color), 1.0))
@@ -494,7 +507,13 @@ class Escena:
             Rayo(self._mundo, self._brillo, lejos, lejos + Vec3(0, 1, 0)),
             Destello(self._mundo, self._brillo, lejos, 0.01),
         ]
-        self._efectos.append(Calentamiento(efectos, [proyectil.nodo, motor]))
+        # Y cada shader del paisaje y del sol (`sombreado.py`): ya compilados, pero el
+        # primer dibujo de cada uno aún prepara su estado en el controlador.
+        quitar = [proyectil.nodo, motor, *self._paisaje.muestras(lejos)]
+        sol = self._deslumbramiento.muestra()
+        if sol is not None:
+            quitar.append(sol)
+        self._efectos.append(Calentamiento(efectos, quitar))
 
     def _explotar(self, punto: Vec3, radio: float, tipo: TipoEnemigo) -> None:
         """Explosión del color del tipo y sacudida de la cámara según tamaño y distancia."""

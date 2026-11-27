@@ -7,8 +7,13 @@ así que no hay costuras entre caras. Con la misma semilla, cada cielo sale siem
 Este módulo no usa el motor: devuelve las caras como matrices de numpy. `fondo.py` las
 convierte en texturas y las guarda en la caché.
 
-Las nebulosas son suaves, así que se calculan a baja resolución y se amplían. Solo las
-estrellas y los soles se dibujan a la resolución final.
+Las nebulosas son suaves, así que se calculan a baja resolución y se amplían; encima,
+un ruido de filamentos finos a resolución media les da detalle. Solo las estrellas y los
+soles se dibujan a la resolución final. El color de cada estrella sale de su temperatura,
+como en el cielo real: muchas amarillentas y anaranjadas, menos blancas y pocas azuladas.
+
+Las estrellas más brillantes no van en el cubo: `brillantes` las da aparte para dibujarlas
+como puntos que centellean (`estrellas.py`).
 """
 
 import math
@@ -22,7 +27,7 @@ from atalaya.presentacion.escena.ruido import fractal, suave
 
 #: Versión del generador. Al cambiar el aspecto de un cielo se sube, para no reutilizar
 #: en la caché cielos generados con la versión anterior.
-VERSION = 1
+VERSION = 2
 
 #: Lado de cada cara en píxeles. Con 1024 px por cada 90° y 1080 px de alto para 70° de
 #: campo de visión, la textura casi nunca se reduce en pantalla y las estrellas no parpadean.
@@ -30,6 +35,8 @@ LADO_CARA = 1024
 
 #: Lado de cada cara al calcular nebulosas, banda y polvo, antes de ampliar.
 _LADO_NUBES = 256
+#: Lado de cada cara al calcular los filamentos finos de las nebulosas.
+_LADO_DETALLE = 512
 
 Color = tuple[float, float, float]
 Direccion = tuple[float, float, float]
@@ -83,7 +90,8 @@ class Tema:
     estrellas: int
     #: Parte de las estrellas que se concentra en la banda galáctica.
     estrellas_banda: float
-    tonos: tuple[Color, ...]
+    #: Temperatura mediana de las estrellas, en kelvin: más alta, cielo más azulado.
+    temperatura: float
     #: Estrellas brillantes con halo y destellos en cruz.
     brillantes: int
     nubes: tuple[Nube, ...] = ()
@@ -94,8 +102,8 @@ class Tema:
     semilla: int = field(default=0)
 
 
-_TONOS_CALIDOS = ((1.0, 0.82, 0.66), (1.0, 0.92, 0.82), (1.0, 1.0, 1.0), (0.85, 0.9, 1.0))
-_TONOS_FRIOS = ((0.75, 0.85, 1.0), (0.85, 0.92, 1.0), (1.0, 1.0, 1.0), (0.7, 0.9, 1.0))
+_CALIDO = 5200.0
+_FRIO = 7800.0
 
 #: Los cinco cielos, uno por cada tramo de 10 oleadas (RN-20).
 TEMAS: tuple[Tema, ...] = (
@@ -108,7 +116,7 @@ TEMAS: tuple[Tema, ...] = (
         polvo=0.35,
         estrellas=9000,
         estrellas_banda=0.3,
-        tonos=_TONOS_CALIDOS,
+        temperatura=_CALIDO,
         brillantes=14,
         nubes=(
             Nube((0.60, 0.34, 0.15), 0.24, (-0.6, 0.5, 0.2), 60, escala=1.8, semilla=1),
@@ -129,7 +137,7 @@ TEMAS: tuple[Tema, ...] = (
         polvo=0.75,
         estrellas=12000,
         estrellas_banda=0.3,
-        tonos=_TONOS_CALIDOS,
+        temperatura=_CALIDO,
         brillantes=22,
         nubes=(
             Nube((0.72, 0.10, 0.22), 0.68, (0.1, 0.9, 0.3), 80, escala=1.9, semilla=3),
@@ -150,7 +158,7 @@ TEMAS: tuple[Tema, ...] = (
         polvo=0.4,
         estrellas=10000,
         estrellas_banda=0.35,
-        tonos=_TONOS_FRIOS,
+        temperatura=_FRIO,
         brillantes=18,
         nubes=(
             Nube((0.04, 0.58, 0.66), 0.46, (-0.7, 0.3, 0.5), 65, escala=2.1, semilla=7),
@@ -168,7 +176,7 @@ TEMAS: tuple[Tema, ...] = (
         polvo=0.5,
         estrellas=10000,
         estrellas_banda=0.3,
-        tonos=_TONOS_CALIDOS,
+        temperatura=_CALIDO,
         brillantes=16,
         nubes=(
             Nube((0.42, 0.18, 0.62), 0.36, (0.7, -0.2, 0.5), 75, escala=2.0, semilla=9),
@@ -187,7 +195,7 @@ TEMAS: tuple[Tema, ...] = (
         polvo=0.85,
         estrellas=16000,
         estrellas_banda=0.55,
-        tonos=_TONOS_CALIDOS,
+        temperatura=_CALIDO,
         brillantes=28,
         nubes=(
             Nube((0.10, 0.66, 0.42), 0.32, (-0.6, -0.5, 0.5), 50, escala=2.3, semilla=12),
@@ -212,8 +220,11 @@ def generar(indice: int, lado: int = LADO_CARA) -> Caras:
     azar = np.random.default_rng(tema.semilla)
     nubes = _campos_nubes(tema, min(lado, _LADO_NUBES))
     imagen = _estrellas(tema, azar, lado)
+    detalle = min(lado, _LADO_DETALLE)
     for cara in range(6):
         ampliada = _ampliar(nubes[cara], lado)
+        filamentos = _ampliar(_filamentos(tema, cara, detalle), lado)
+        ampliada[..., :3] *= filamentos
         # El polvo oscurece las nubes y las estrellas que hay detrás; los soles, no.
         imagen[cara] += ampliada[..., :3]
         imagen[cara] *= ampliada[..., 3:4]
@@ -284,6 +295,21 @@ def _ampliar(campo: _Campo, lado: int) -> _Campo:
 
 
 # --- capas ---------------------------------------------------------------------------
+
+
+def _filamentos(tema: Tema, cara: int, n: int) -> _Campo:
+    """Factor de detalle fino de las nebulosas en una cara; forma `(n, n, 1)`.
+
+    Crestas de ruido (filamentos) y huecos: multiplica la luz de nebulosas y banda, así
+    que donde no hay nube no cambia nada.
+    """
+    d = _direcciones_cara(cara, n, bordes=True)
+    ruido = fractal(d * np.float32(9.0), tema.semilla + 404, 3)
+    crestas = 1.0 - np.abs(ruido - 0.5) * 2.0
+    huecos = fractal(d * np.float32(5.0) + np.float32(3.3), tema.semilla + 405, 2)
+    factor = 0.55 + 0.75 * crestas**3 + 0.5 * (huecos - 0.5)
+    resultado: _Campo = np.clip(factor, 0.25, 1.6).astype(np.float32)[..., None]
+    return resultado
 
 
 def _campos_nubes(tema: Tema, n: int) -> _Campo:
@@ -359,20 +385,63 @@ def _estrellas(tema: Tema, azar: np.random.Generator, lado: int) -> _Campo:
     en_banda = int(numero * tema.estrellas_banda)
     direcciones = _direcciones_al_azar(azar, numero - en_banda)
     direcciones = np.concatenate([direcciones, _direcciones_banda(azar, tema, en_banda)])
-    brillo = (0.25 + 0.75 * azar.random(len(direcciones)) ** 3).astype(np.float32)
-    tonos = np.asarray(tema.tonos, dtype=np.float32)[
-        azar.integers(0, len(tema.tonos), len(direcciones))
-    ]
+    # Muchas tenues y pocas brillantes; las más brillantes van aparte (`brillantes`).
+    brillo = (0.18 + 0.62 * azar.random(len(direcciones)) ** 4).astype(np.float32)
+    tonos = colores_estrellas(azar, tema.temperatura, len(direcciones))
     imagen = np.zeros((6, lado, lado, 3), dtype=np.float32)
     _salpicar(imagen, direcciones, brillo, tonos, escala)
     # Estrellas brillantes: halo amplio y destellos en cruz.
     grandes = _direcciones_al_azar(azar, tema.brillantes)
-    tonos_grandes = np.asarray(tema.tonos, dtype=np.float32)[
-        azar.integers(0, len(tema.tonos), tema.brillantes)
-    ]
+    tonos_grandes = colores_estrellas(azar, tema.temperatura, tema.brillantes)
     fuerza = (0.6 + 0.4 * azar.random(tema.brillantes)).astype(np.float32)
     _brillantes(imagen, grandes, fuerza, tonos_grandes, escala)
     return imagen
+
+
+def brillantes(indice: int, numero: int = 1500) -> tuple[_Campo, _Campo, _Campo]:
+    """Estrellas brillantes del cielo `indice`, para dibujarlas aparte como puntos.
+
+    Devuelve sus direcciones `(numero, 3)`, sus colores `(numero, 3)` y su brillo
+    `(numero,)`, de 0,5 a 1. Siempre las mismas para cada cielo. Parte de ellas se
+    concentra en la banda galáctica, como las del cubo.
+    """
+    tema = TEMAS[indice - 1]
+    azar = np.random.default_rng(tema.semilla + 7919)
+    en_banda = int(numero * tema.estrellas_banda)
+    direcciones = np.concatenate(
+        [_direcciones_al_azar(azar, numero - en_banda), _direcciones_banda(azar, tema, en_banda)]
+    ).astype(np.float32)
+    colores = colores_estrellas(azar, tema.temperatura, numero)
+    brillo = (0.5 + 0.5 * azar.random(numero) ** 3).astype(np.float32)
+    return direcciones, colores, brillo
+
+
+def colores_estrellas(azar: np.random.Generator, mediana: float, numero: int) -> _Campo:
+    """Colores de `numero` estrellas con temperaturas repartidas alrededor de `mediana`."""
+    temperatura = np.exp(azar.normal(math.log(mediana), 0.38, numero))
+    return color_temperatura(np.clip(temperatura, 2600.0, 30000.0))
+
+
+def color_temperatura(kelvin: NDArray[np.float64]) -> _Campo:
+    """Color aproximado de un cuerpo negro a `kelvin` grados, con el canal mayor a 1.
+
+    Aproximación por tramos de la curva de color de los cuerpos negros, algo desaturada:
+    a simple vista las estrellas son casi blancas, con un tinte.
+    """
+    t = np.asarray(kelvin, np.float64) / 100.0
+    rojo = np.where(t <= 66, 255.0, 329.7 * np.power(np.maximum(t - 60, 1e-6), -0.1332))
+    verde = np.where(
+        t <= 66,
+        99.47 * np.log(t) - 161.12,
+        288.12 * np.power(np.maximum(t - 60, 1e-6), -0.0755),
+    )
+    azul = np.where(
+        t >= 66, 255.0, np.where(t <= 19, 0.0, 138.52 * np.log(np.maximum(t - 10, 1e-6)) - 305.04)
+    )
+    color = np.clip(np.stack([rojo, verde, azul], axis=-1), 0.0, 255.0) / 255.0
+    color /= color.max(axis=-1, keepdims=True)
+    blanco = np.ones_like(color)
+    return (blanco + (color - blanco) * 0.7).astype(np.float32)
 
 
 def _direcciones_al_azar(azar: np.random.Generator, n: int) -> NDArray[np.float64]:

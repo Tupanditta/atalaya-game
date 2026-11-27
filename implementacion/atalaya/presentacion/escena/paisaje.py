@@ -3,11 +3,15 @@
 Qué hay en cada fondo lo dice `planetas.PAISAJES`; aquí se construyen los nodos. Todo
 queda más lejos que el alcance del radar, así que no tapa enemigos ni proyectiles.
 
-- **Planetas:** esferas con su textura, iluminadas por el sol del fondo, con un halo de
-  atmósfera en el borde y anillos si los tienen. Los volcánicos tienen una segunda capa
-  de lava que brilla también en la cara oscura. Giran despacio sobre su eje.
+- **Planetas:** esferas con su textura, iluminadas por el sol del fondo, con atmósfera y
+  anillos si los tienen. Giran despacio sobre su eje. Con shaders (`planetas_glsl.py`),
+  la luz se calcula por píxel: relieve, nubes con sombra, brillo del hielo, lava que se ve
+  más de noche, una atmósfera que dispersa la luz del sol y sombras entre el planeta y sus
+  anillos. Sin shaders, luz del motor, un halo plano y una segunda esfera de lava.
 - **Asteroides:** un cinturón de rocas lejanas, unidas en pocas geometrías que orbitan
-  despacio alrededor de la estación, y unas pocas rocas más cercanas que ruedan.
+  despacio alrededor de la estación, y unas pocas rocas más cercanas, con más detalle, que
+  ruedan. Cada roca es una malla deformada con ruido, de normales suaves y con las
+  hendiduras oscurecidas; con shaders (`asteroides_glsl.py`), la luz es por píxel.
 - **Polvo:** motas tenues alrededor de la estación que derivan despacio: con la cámara
   quieta, dan sensación de espacio.
 
@@ -21,6 +25,7 @@ import random
 from dataclasses import dataclass, field
 
 import numpy as np
+from numpy.typing import NDArray
 from panda3d.core import (
     AmbientLight,
     CardMaker,
@@ -30,21 +35,36 @@ from panda3d.core import (
     GeomNode,
     GeomPoints,
     GeomTriangles,
+    GeomVertexArrayFormat,
     GeomVertexData,
     GeomVertexFormat,
     GeomVertexWriter,
     GraphicsStateGuardianBase,
+    InternalName,
     NodePath,
     OmniBoundingVolume,
     SamplerState,
+    Shader,
     TexGenAttrib,
     Texture,
     TextureStage,
     TransparencyAttrib,
     Vec3,
+    Vec4,
 )
 
-from atalaya.presentacion.escena.planetas import PAISAJES, Asteroides, Planeta, textura_anillos
+from atalaya.presentacion.escena.planetas import (
+    PAISAJES,
+    Asteroides,
+    Planeta,
+    Superficie,
+    textura_anillos,
+)
+from atalaya.presentacion.escena.ruido import fractal
+from atalaya.presentacion.escena.sombreado import Sombreado
+
+#: Texturas de un planeta en el motor: color (con la altura), luz propia y nubes.
+TexturasMotor = tuple[Texture, Texture | None, Texture | None]
 
 #: Distancia de los planetas a la estación. Con el mayor radio angular (15°) y sus
 #: anillos, todo cabe entre el alcance del radar y el plano lejano de la cámara.
@@ -57,11 +77,17 @@ _LADOS_ANILLOS = 120
 _ALCANCE_ATMOSFERA = 1.35
 #: Luz ambiente de los planetas: la cara de noche se adivina, pero es oscura.
 _AMBIENTE = (0.045, 0.045, 0.06, 1.0)
+#: Con shaders: radio de la cáscara de la atmósfera, en radios del planeta.
+_CASCARA_ATMOSFERA = 1.045
+#: Altura del relieve, en radios del planeta (exagerada para que se vea desde lejos).
+_RELIEVE = 0.03
+#: Opacidad de las nubes.
+_OPACIDAD_NUBES = 0.92
 
 #: Grupos en que se une el cinturón lejano, y su velocidad de órbita en grados por segundo.
 _GRUPOS_CINTURON = 6
 _ORBITA = (0.12, 0.35)
-_VARIANTES_ROCA = 5
+_VARIANTES_ROCA = 8
 #: Giro de las rocas cercanas, en grados por segundo.
 _GIRO_ROCAS = 25.0
 #: Las rocas cercanas están a esta parte de la distancia mínima del campo.
@@ -90,10 +116,30 @@ class _Escenario:
 class Paisaje:
     """Paisaje del fondo actual, con los de otros fondos ya preparados y ocultos."""
 
-    def __init__(self, padre: NodePath, brillo: Texture) -> None:
+    def __init__(
+        self, padre: NodePath, brillo: Texture, sombreado: Sombreado | None = None
+    ) -> None:
         self._raiz = padre.attach_new_node("paisaje")
         self._brillo = brillo
+        self._sombreado = sombreado
         self._atmosfera = textura_atmosfera()
+        self._vacia = _textura_rgba(np.zeros((1, 1, 4), dtype=np.uint8))
+        # Valores por defecto de las entradas de los shaders: cada planeta pone los suyos.
+        self._raiz.set_shader_inputs(
+            tex_emisivo=self._vacia,
+            tex_nubes=self._vacia,
+            tex_anillos=self._vacia,
+            emisivo=0.0,
+            hielo=0.0,
+            relieve=0.0,
+            tiempo=0.0,
+            nubes=Vec4(0, 0, 0, 0),
+            atmosfera=Vec4(0, 0, 0, 0),
+            anillos=Vec3(0, 0, 0),
+            alcance=_CASCARA_ATMOSFERA,
+            luz_dir=Vec3(0, 0, 1),
+            luz_color=Vec3(1, 1, 1),
+        )
         sol = DirectionalLight("sol-paisaje")
         self._sol = self._raiz.attach_new_node(sol)
         ambiente = AmbientLight("ambiente-paisaje")
@@ -115,7 +161,7 @@ class Paisaje:
     def preparar(
         self,
         indice: int,
-        texturas: list[tuple[Texture, Texture | None]],
+        texturas: list[TexturasMotor],
         gsg: GraphicsStateGuardianBase | None = None,
     ) -> None:
         """Construye el paisaje del fondo `indice`, oculto, y lo sube a la tarjeta gráfica."""
@@ -127,7 +173,7 @@ class Paisaje:
         escenario.nodo.stash()
         self._escenarios[indice] = escenario
 
-    def mostrar(self, indice: int, texturas: list[tuple[Texture, Texture | None]]) -> None:
+    def mostrar(self, indice: int, texturas: list[TexturasMotor]) -> None:
         """Muestra el paisaje del fondo `indice` en lugar del actual."""
         if indice == self._actual:
             return
@@ -148,6 +194,7 @@ class Paisaje:
         escenario = self._escenarios[self._actual]
         escenario.tiempo += dt
         t = escenario.tiempo
+        escenario.nodo.set_shader_input("tiempo", t)
         for nodo, velocidad in escenario.giros:
             nodo.set_h(velocidad * t)
         for nodo, velocidad in escenario.orbitas:
@@ -159,24 +206,24 @@ class Paisaje:
 
     # --- construcción ----------------------------------------------------------------
 
-    def _construir(self, indice: int, texturas: list[tuple[Texture, Texture | None]]) -> _Escenario:
+    def _construir(self, indice: int, texturas: list[TexturasMotor]) -> _Escenario:
         paisaje = PAISAJES[indice - 1]
         escenario = _Escenario(self._raiz.attach_new_node(f"paisaje-{indice}"))
-        for planeta, (color, emisivo) in zip(paisaje.planetas, texturas, strict=True):
-            self._planeta(escenario, planeta, color, emisivo, indice)
+        escenario.nodo.set_shader_inputs(
+            luz_dir=Vec3(*paisaje.luz_direccion).normalized(), luz_color=Vec3(*paisaje.luz_color)
+        )
+        for planeta, texturas_planeta in zip(paisaje.planetas, texturas, strict=True):
+            self._planeta(escenario, planeta, texturas_planeta, indice)
         if paisaje.asteroides is not None:
             self._asteroides(escenario, paisaje.asteroides)
         escenario.polvo = self._polvo(escenario.nodo, paisaje.polvo, indice)
         return escenario
 
     def _planeta(
-        self,
-        escenario: _Escenario,
-        planeta: Planeta,
-        color: Texture,
-        emisivo: Texture | None,
-        indice: int,
+        self, escenario: _Escenario, planeta: Planeta, texturas: TexturasMotor, indice: int
     ) -> None:
+        color, emisivo, nubes = texturas
+        programa = self._programa("planeta")
         radio = DISTANCIA_PLANETAS * math.tan(math.radians(planeta.tamano))
         nodo = escenario.nodo.attach_new_node("planeta")
         nodo.set_pos(Vec3(*planeta.direccion).normalized() * DISTANCIA_PLANETAS)
@@ -191,14 +238,47 @@ class Paisaje:
         superficie = giro.attach_new_node("superficie")
         superficie.attach_new_node(_esfera())
         superficie.set_texture(color)
-        if emisivo is not None:
+        bandas = (
+            None
+            if planeta.anillos is None
+            else _textura_rgba(textura_anillos(planeta.anillos[0], planeta.semilla))
+        )
+        if planeta.anillos is not None and bandas is not None:
+            nodo.set_shader_inputs(
+                anillos=Vec3(planeta.anillos[1], planeta.anillos[2], 1), tex_anillos=bandas
+            )
+        if planeta.atmosfera is not None:
+            # En un gigante gaseoso, una atmósfera fuerte taparía sus bandas.
+            fuerza = 0.45 if planeta.superficie is Superficie.GASEOSO else 1.0
+            nodo.set_shader_input("atmosfera", Vec4(*planeta.atmosfera, fuerza))
+        if programa is not None:
+            superficie.set_shader(programa)
+            superficie.set_shader_inputs(
+                tex_color=color,
+                relieve=_RELIEVE * color.get_x_size() / (4 * math.pi),
+                hielo=1.0 if planeta.superficie is Superficie.HELADO else 0.0,
+            )
+            if emisivo is not None:
+                superficie.set_shader_inputs(tex_emisivo=emisivo, emisivo=1.0)
+            if nubes is not None:
+                superficie.set_shader_inputs(
+                    tex_nubes=nubes, nubes=Vec4(*planeta.color_nubes, _OPACIDAD_NUBES)
+                )
+        elif emisivo is not None:
             lava = giro.attach_new_node("lava")
             lava.attach_new_node(_esfera())
             lava.set_scale(1.002)
             lava.set_texture(emisivo)
             _aditivo(lava)
         escenario.giros.append((giro, planeta.giro))
-        if planeta.atmosfera is not None:
+        atmosfera = self._programa("atmosfera")
+        if planeta.atmosfera is not None and atmosfera is not None:
+            cascara = nodo.attach_new_node("atmosfera")
+            cascara.attach_new_node(_esfera())
+            cascara.set_scale(_CASCARA_ATMOSFERA)
+            cascara.set_shader(atmosfera)
+            _aditivo(cascara)
+        elif planeta.atmosfera is not None:
             tarjeta = CardMaker("atmosfera")
             tarjeta.set_frame(-1, 1, -1, 1)
             halo = nodo.attach_new_node(tarjeta.generate())
@@ -209,24 +289,70 @@ class Paisaje:
             halo.set_billboard_point_eye()
             halo.set_color(*planeta.atmosfera, 0.8)
             _aditivo(halo)
-        if planeta.anillos is not None:
-            color_anillos, interior, exterior = planeta.anillos
+        if planeta.anillos is not None and bandas is not None:
+            _, interior, exterior = planeta.anillos
             anillos = eje.attach_new_node(_anillos(interior, exterior))
-            anillos.set_texture(_textura_rgba(textura_anillos(color_anillos, planeta.semilla)))
+            anillos.set_texture(bandas)
             anillos.set_transparency(TransparencyAttrib.M_alpha)
             anillos.set_two_sided(True)
             anillos.set_depth_write(False)
             anillos.set_light_off()
-            luz = PAISAJES[indice - 1].luz_color
-            anillos.set_color_scale(*(0.85 * c for c in luz), 1.0)
+            programa_anillos = self._programa("anillos")
+            if programa_anillos is not None:
+                anillos.set_shader(programa_anillos)
+            else:
+                luz = PAISAJES[indice - 1].luz_color
+                anillos.set_color_scale(*(0.85 * c for c in luz), 1.0)
+
+    def muestras(self, punto: Vec3) -> list[NodePath]:
+        """Una pieza diminuta con cada shader del paisaje, en `punto`, para calentarlos.
+
+        Planeta, atmósfera, anillos y roca, con los valores por defecto de las entradas.
+        `Calentamiento` las dibuja en el menú y las quita: así el primer dibujo de cada
+        programa no da un tirón en partida. Sin shaders, ninguna.
+        """
+        if self._sombreado is None or not self._sombreado.activo:
+            return []
+        grupo = self._raiz.attach_new_node("calentamiento")
+        grupo.set_pos(punto)
+        grupo.set_scale(0.01)
+        piezas = {
+            "planeta": _esfera(),
+            "atmosfera": _esfera(),
+            "anillos": _anillos(1.2, 2.0),
+            "roca": _roca(0, 2),
+        }
+        for nombre, geometria in piezas.items():
+            programa = self._programa(nombre)
+            if programa is None:
+                continue
+            pieza = grupo.attach_new_node(f"muestra-{nombre}")
+            pieza.attach_new_node(geometria)
+            pieza.set_shader(programa)
+            pieza.set_shader_input("tex_color", self._vacia)
+            if nombre == "atmosfera":
+                _aditivo(pieza)
+            elif nombre == "anillos":
+                pieza.set_transparency(TransparencyAttrib.M_alpha)
+                pieza.set_depth_write(False)
+        return [grupo]
+
+    def _programa(self, nombre: str) -> Shader | None:
+        return None if self._sombreado is None else self._sombreado.programa(nombre)
 
     def _asteroides(self, escenario: _Escenario, campo: Asteroides) -> None:
         azar = random.Random(campo.semilla)
-        variantes = [_roca(campo.semilla * 31 + i) for i in range(_VARIANTES_ROCA)]
+        # Las lejanas ocupan pocos píxeles: con menos detalle basta.
+        variantes = [_roca(campo.semilla * 31 + i, 2) for i in range(_VARIANTES_ROCA)]
+        detalladas = [_roca(campo.semilla * 31 + i, 3) for i in range(_VARIANTES_ROCA)]
         centro = Vec3(*campo.centro).normalized()
+        asteroides = escenario.nodo.attach_new_node("asteroides")
+        programa = self._programa("roca")
+        if programa is not None:
+            asteroides.set_shader(programa)
         grupos = []
         for i in range(_GRUPOS_CINTURON):
-            grupo = escenario.nodo.attach_new_node(f"cinturon-{i}")
+            grupo = asteroides.attach_new_node(f"cinturon-{i}")
             # Cada grupo orbita a su ritmo: el cinturón no se mueve como un bloque.
             velocidad = azar.uniform(*_ORBITA) * azar.choice((-1, 1))
             grupos.append(grupo)
@@ -242,17 +368,18 @@ class Paisaje:
             roca.set_scale(
                 campo.tamano[0] * (campo.tamano[1] / campo.tamano[0]) ** azar.random() ** 2
             )
-            roca.set_color(*_variar(campo.color, azar), 1.0)
+            # Escala de color, no color: así se conservan las vetas y sombras de la roca.
+            roca.set_color_scale(*_variar(campo.color, azar), 1.0)
         # Unir las rocas de cada grupo deja una sola geometría que dibujar por grupo.
         for grupo in grupos:
             grupo.flatten_strong()
         for _ in range(campo.cercanos):
             direccion = _cerca_de(centro, campo.extension * 0.8, azar)
-            roca = escenario.nodo.attach_new_node("roca-cercana")
-            roca.attach_new_node(azar.choice(variantes))
+            roca = asteroides.attach_new_node("roca-cercana")
+            roca.attach_new_node(azar.choice(detalladas))
             roca.set_pos(direccion * minimo * azar.uniform(*_CERCANIA_ROCAS))
             roca.set_scale(campo.tamano[1] * azar.uniform(1.0, 1.8))
-            roca.set_color(*_variar(campo.color, azar), 1.0)
+            roca.set_color_scale(*_variar(campo.color, azar), 1.0)
             inicial = Vec3(azar.uniform(0, 360), azar.uniform(0, 360), azar.uniform(0, 360))
             giro = Vec3(*(azar.uniform(-1, 1) * _GIRO_ROCAS for _ in range(3)))
             escenario.rocas.append((roca, inicial, giro))
@@ -351,12 +478,119 @@ def _anillos(interior: float, exterior: float) -> GeomNode:
     return nodo
 
 
-def _roca(semilla: int) -> GeomNode:
-    """Roca irregular: icosaedro subdividido con los vértices desplazados, de caras planas."""
-    azar = random.Random(semilla)
+@dataclass(frozen=True)
+class FormaRoca:
+    """Malla de una roca: vértices, normales suaves, color por vértice y triángulos."""
+
+    puntos: NDArray[np.float32]
+    normales: NDArray[np.float32]
+    colores: NDArray[np.float32]
+    triangulos: NDArray[np.int64]
+
+
+def forma_roca(semilla: int, subdivisiones: int) -> FormaRoca:
+    """Roca irregular: icosaedro subdividido y desplazado con ruido.
+
+    Bultos grandes y detalle fino de `ruido.fractal`, unos cuantos cráteres hundidos y una
+    forma alargada. Las normales son suaves (la media de las caras de alrededor) y el color
+    de cada vértice oscurece las hendiduras, como una oclusión de la luz ambiente, y añade
+    vetas claras y oscuras.
+    """
+    azar = np.random.default_rng(semilla)
+    d, caras = _icosfera(subdivisiones)
+    s = semilla * 13
+    radio = (
+        1.0
+        + 1.0 * (fractal(d * 1.4, s, 3) - 0.5)
+        + 0.4 * (fractal(d * 4.5, s + 1, 3) - 0.5)
+        + 0.15 * (fractal(d * 11.0, s + 3, 2) - 0.5)
+    )
+    for _ in range(int(azar.integers(2, 6))):
+        centro = azar.normal(size=3)
+        centro /= np.linalg.norm(centro)
+        ancho = azar.uniform(0.25, 0.6)
+        distancia = np.arccos(np.clip(d @ centro, -1, 1)) / ancho
+        hundido = np.clip(1 - distancia**2, 0, None) * azar.uniform(0.08, 0.18)
+        borde = np.exp(-(((distancia - 1.0) / 0.25) ** 2)) * 0.04
+        radio = radio - hundido + borde
+    estirado = np.asarray(
+        (azar.uniform(0.85, 1.35), azar.uniform(0.7, 1.0), azar.uniform(0.6, 0.9)), np.float32
+    )
+    puntos = (d * radio[:, None] * estirado).astype(np.float32)
+    # Normales suaves: suma de las normales de las caras de cada vértice, pesadas por área.
+    a, b, c = (puntos[caras[:, k]] for k in range(3))
+    de_cara = np.cross(b - a, c - a)
+    normales = np.zeros_like(puntos)
+    for k in range(3):
+        np.add.at(normales, caras[:, k], de_cara)
+    normales /= np.linalg.norm(normales, axis=1, keepdims=True)
+    # Hendiduras: vértices por debajo de la media de sus vecinos.
+    vecinos = np.zeros(len(d), np.float32)
+    cuenta = np.zeros(len(d), np.float32)
+    for k in range(3):
+        for m in (1, 2):
+            np.add.at(vecinos, caras[:, k], radio[caras[:, (k + m) % 3]])
+            np.add.at(cuenta, caras[:, k], 1.0)
+    oclusion = np.clip(1.0 + 6.0 * (radio - vecinos / cuenta), 0.45, 1.15)
+    vetas = 0.78 + 0.44 * fractal(d * 3.0 + np.float32(9.1), s + 2, 3)
+    gris = (oclusion * vetas).astype(np.float32)
+    colores = np.stack([gris, gris * 0.98, gris * 0.95, np.ones_like(gris)], axis=1)
+    return FormaRoca(puntos, normales.astype(np.float32), colores.astype(np.float32), caras)
+
+
+def _roca(semilla: int, subdivisiones: int) -> GeomNode:
+    """Geometría del motor de `forma_roca`, escrita de una vez desde numpy."""
+    forma = forma_roca(semilla, subdivisiones)
+    filas = np.concatenate([forma.puntos, forma.normales, forma.colores], axis=1)
+    datos = GeomVertexData("roca", _formato_roca(), Geom.UH_static)
+    datos.unclean_set_num_rows(len(filas))
+    memoryview(datos.modify_array(0)).cast("B")[:] = filas.astype(np.float32).tobytes()
+    triangulos = GeomTriangles(Geom.UH_static)
+    triangulos.set_index_type(Geom.NT_uint16)
+    indices = triangulos.modify_vertices()
+    indices.unclean_set_num_rows(forma.triangulos.size)
+    memoryview(indices).cast("B")[:] = forma.triangulos.astype(np.uint16).tobytes()
+    geom = Geom(datos)
+    geom.add_primitive(triangulos)
+    nodo = GeomNode("roca")
+    nodo.add_geom(geom)
+    return nodo
+
+
+def _medio(
+    puntos: list[NDArray[np.float64]], medios: dict[tuple[int, int], int], a: int, b: int
+) -> int:
+    """Índice del punto medio entre los puntos `a` y `b`, sobre la esfera; lo crea si falta."""
+    clave = (min(a, b), max(a, b))
+    if clave not in medios:
+        p = puntos[a] + puntos[b]
+        puntos.append(p / np.linalg.norm(p))
+        medios[clave] = len(puntos) - 1
+    return medios[clave]
+
+
+def _formato_roca() -> GeomVertexFormat:
+    """Posición, normal y color RGBA, todo en float32 y en una sola tabla."""
+    if "formato-roca" not in _formatos:
+        columnas = GeomVertexArrayFormat()
+        columnas.add_column(InternalName.get_vertex(), 3, Geom.NT_float32, Geom.C_point)
+        columnas.add_column(InternalName.get_normal(), 3, Geom.NT_float32, Geom.C_normal)
+        columnas.add_column(InternalName.get_color(), 4, Geom.NT_float32, Geom.C_color)
+        _formatos["formato-roca"] = GeomVertexFormat.register_format(GeomVertexFormat(columnas))
+    return _formatos["formato-roca"]
+
+
+_formatos: dict[str, GeomVertexFormat] = {}
+
+
+def _icosfera(subdivisiones: int) -> tuple[NDArray[np.float32], NDArray[np.int64]]:
+    """Esfera de radio 1: icosaedro con cada triángulo partido en 4 `subdivisiones` veces.
+
+    Los triángulos van en sentido antihorario vistos desde fuera.
+    """
     t = (1 + math.sqrt(5)) / 2
     puntos = [
-        Vec3(*v).normalized()
+        np.asarray(v, np.float64) / math.sqrt(1 + t * t)
         for v in [
             (-1, t, 0), (1, t, 0), (-1, -t, 0), (1, -t, 0),
             (0, -1, t), (0, 1, t), (0, -1, -t), (0, 1, -t),
@@ -369,43 +603,20 @@ def _roca(semilla: int) -> GeomNode:
         (3, 9, 4), (3, 4, 2), (3, 2, 6), (3, 6, 8), (3, 8, 9),
         (4, 9, 5), (2, 4, 11), (6, 2, 10), (8, 6, 7), (9, 8, 1),
     ]  # fmt: skip
-    medios: dict[tuple[int, int], int] = {}
-
-    def medio(a: int, b: int) -> int:
-        clave = (min(a, b), max(a, b))
-        if clave not in medios:
-            puntos.append((puntos[a] + puntos[b]).normalized())
-            medios[clave] = len(puntos) - 1
-        return medios[clave]
-
-    subdivididas = []
-    for a, b, c in caras:
-        ab, bc, ca = medio(a, b), medio(b, c), medio(c, a)
-        subdivididas += [(a, ab, ca), (b, bc, ab), (c, ca, bc), (ab, bc, ca)]
-    # Forma alargada e irregular: cada vértice a su propia distancia del centro.
-    estirado = Vec3(azar.uniform(0.8, 1.3), azar.uniform(0.7, 1.0), azar.uniform(0.6, 0.9))
-    deformados = [
-        Vec3(p.x * estirado.x, p.y * estirado.y, p.z * estirado.z) * azar.uniform(0.75, 1.1)
-        for p in puntos
-    ]
-    datos = GeomVertexData("roca", GeomVertexFormat.get_v3n3(), Geom.UH_static)
-    vertices = GeomVertexWriter(datos, "vertex")
-    normales = GeomVertexWriter(datos, "normal")
-    triangulos = GeomTriangles(Geom.UH_static)
-    for i, (a, b, c) in enumerate(subdivididas):
-        pa, pb, pc = deformados[a], deformados[b], deformados[c]
-        normal = (pb - pa).cross(pc - pa).normalized()
-        if normal.dot(pa + pb + pc) < 0:
-            pb, pc, normal = pc, pb, -normal
-        for punto in (pa, pb, pc):
-            vertices.add_data3(punto)
-            normales.add_data3(normal)
-        triangulos.add_vertices(3 * i, 3 * i + 1, 3 * i + 2)
-    geom = Geom(datos)
-    geom.add_primitive(triangulos)
-    nodo = GeomNode("roca")
-    nodo.add_geom(geom)
-    return nodo
+    for _ in range(subdivisiones):
+        medios: dict[tuple[int, int], int] = {}
+        nuevas = []
+        for a, b, c in caras:
+            ab, bc, ca = (_medio(puntos, medios, x, y) for x, y in ((a, b), (b, c), (c, a)))
+            nuevas += [(a, ab, ca), (b, bc, ab), (c, ca, bc), (ab, bc, ca)]
+        caras = nuevas
+    d = np.asarray(puntos, np.float32)
+    indices = np.asarray(caras, np.int64)
+    # Antihorario visto desde fuera: la normal de la cara apunta hacia fuera.
+    pa, pb, pc = (d[indices[:, k]] for k in range(3))
+    hacia_dentro = np.einsum("ij,ij->i", np.cross(pb - pa, pc - pa), pa + pb + pc) < 0
+    indices[hacia_dentro] = indices[hacia_dentro][:, [0, 2, 1]]
+    return d, indices
 
 
 # --- texturas y ayudas -----------------------------------------------------------------

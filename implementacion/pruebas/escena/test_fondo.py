@@ -148,21 +148,33 @@ def test_fondos_prepara_todo_en_segundo_plano(tmp_path: Path) -> None:
 
 def test_cache_de_planetas(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
     """Las texturas de los planetas se guardan y se leen igual que el cielo."""
+    for indice in (1, 4):
+        primera = fondo.cargar_planetas(indice, tmp_path, DIVISOR)
+        leidas = fondo.leer_planetas(indice, tmp_path, DIVISOR)
+        assert leidas is not None
+        for originales, guardadas in zip(primera, leidas, strict=True):
+            for original, guardada in zip(originales, guardadas, strict=True):
+                assert (original is None) == (guardada is None)
+                if original is not None and guardada is not None:
+                    assert np.array_equal(original, guardada)
     primera = fondo.cargar_planetas(4, tmp_path, DIVISOR)
-    assert [e is not None for _, e in primera] == [False, False, True]
+    assert [e is not None for _, e, _ in primera] == [False, False, True]
 
     def sin_generar(indice: int, divisor: int) -> list[fondo.TexturasPlaneta]:
         raise AssertionError("debería leerse de la caché")
 
     monkeypatch.setattr(planetas, "generar_texturas", sin_generar)
-    leidas = fondo.cargar_planetas(4, tmp_path, DIVISOR)
-    for (c1, e1), (c2, e2) in zip(primera, leidas, strict=True):
-        assert np.array_equal(c1, c2)
-        if e1 is None or e2 is None:
-            assert e1 is None
-            assert e2 is None
-        else:
-            assert np.array_equal(e1, e2)
+    assert len(fondo.cargar_planetas(4, tmp_path, DIVISOR)) == 3
+
+
+def test_cache_de_planetas_sin_altura_ni_nubes(tmp_path: Path) -> None:
+    """Unas texturas RGB, como las de la versión 1, no se leen: se generan de nuevo."""
+    ancho = planetas.ANCHO_GRANDE // DIVISOR
+    antigua = tmp_path / f"planetas-1-v{planetas.VERSION}-{ancho}.npz"
+    rgb = {f"color{i}": np.zeros((ancho // 2, ancho, 3), np.uint8) for i in range(2)}
+    np.savez_compressed(antigua, **rgb)
+    assert fondo.leer_planetas(1, tmp_path, DIVISOR) is None
+    assert fondo.cargar_planetas(1, tmp_path, DIVISOR)[0][0].shape[-1] == 4
 
 
 def test_fondos_sin_cache_disponible(tmp_path: Path) -> None:

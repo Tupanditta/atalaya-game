@@ -36,8 +36,10 @@ from panda3d.core import (
 from atalaya.presentacion.escena import cielo, planetas
 from atalaya.presentacion.escena.cielo import LADO_CARA, Caras
 
-#: Texturas de un planeta: color y, si brilla, luz propia.
-TexturasPlaneta = tuple[NDArray[np.uint8], NDArray[np.uint8] | None]
+#: Texturas de un planeta: color con la altura, luz propia y nubes (`planetas.Texturas`).
+TexturasPlaneta = planetas.Texturas
+#: Las mismas, ya como texturas del motor.
+TexturasMotor = tuple[Texture, Texture | None, Texture | None]
 
 #: Número de fondos distintos (RN-20).
 FONDOS = len(cielo.TEMAS)
@@ -109,14 +111,18 @@ def leer_planetas(indice: int, carpeta: Path, divisor: int = 1) -> list[Texturas
             leidas: list[TexturasPlaneta] = []
             for i, planeta in enumerate(especificaciones):
                 color: NDArray[np.uint8] = datos[f"color{i}"]
-                emisivo: NDArray[np.uint8] | None = (
-                    datos[f"emisivo{i}"] if f"emisivo{i}" in datos.files else None
+                emisivo, nubes = (
+                    datos[f"{clave}{i}"] if f"{clave}{i}" in datos.files else None
+                    for clave in ("emisivo", "nubes")
                 )
                 ancho = planetas.ancho_textura(planeta, divisor)
-                if color.shape != (ancho // 2, ancho, 3) or color.dtype != np.uint8:
+                if color.shape != (ancho // 2, ancho, 4) or color.dtype != np.uint8:
                     return None
-                leidas.append((color, emisivo))
-            if len(datos.files) != len(leidas) + sum(e is not None for _, e in leidas):
+                if (nubes is None) != (planeta.nubes <= 0):
+                    return None
+                leidas.append((color, emisivo, nubes))
+            guardadas = sum(1 + sum(t is not None for t in resto) for _, *resto in leidas)
+            if len(datos.files) != guardadas:
                 return None
     except (OSError, ValueError, KeyError, zipfile.BadZipFile):
         return None
@@ -133,10 +139,12 @@ def cargar_planetas(
         return leidas
     generadas = planetas.generar_texturas(indice, divisor)
     matrices: dict[str, NDArray[np.uint8]] = {}
-    for i, (color, emisivo) in enumerate(generadas):
+    for i, (color, emisivo, nubes) in enumerate(generadas):
         matrices[f"color{i}"] = color
         if emisivo is not None:
             matrices[f"emisivo{i}"] = emisivo
+        if nubes is not None:
+            matrices[f"nubes{i}"] = nubes
     _guardar(ruta_planetas(indice, carpeta, divisor), **matrices)
     return generadas
 
@@ -173,11 +181,17 @@ def textura_cielo(caras: Caras, nombre: str = "fondo") -> Texture:
 def textura_planeta(imagen: NDArray[np.uint8], nombre: str = "planeta") -> Texture:
     """Textura del motor con un mapa de latitud y longitud de `planetas.py`.
 
-    La fila 0 del mapa es el polo sur, que es también la fila de abajo para el motor.
+    RGB, RGBA (el alfa es la altura) o gris (nubes). La fila 0 del mapa es el polo sur,
+    que es también la fila de abajo para el motor.
     """
-    datos = np.ascontiguousarray(imagen[..., ::-1])
+    if imagen.ndim == 2:
+        datos, formato = np.ascontiguousarray(imagen), Texture.F_luminance
+    elif imagen.shape[-1] == 4:
+        datos, formato = np.ascontiguousarray(imagen[..., [2, 1, 0, 3]]), Texture.F_rgba
+    else:
+        datos, formato = np.ascontiguousarray(imagen[..., ::-1]), Texture.F_rgb
     textura = Texture(nombre)
-    textura.setup_2d_texture(datos.shape[1], datos.shape[0], Texture.T_unsigned_byte, Texture.F_rgb)
+    textura.setup_2d_texture(datos.shape[1], datos.shape[0], Texture.T_unsigned_byte, formato)
     textura.set_ram_image(datos.data)
     textura.set_minfilter(SamplerState.FT_linear_mipmap_linear)
     textura.set_magfilter(SamplerState.FT_linear)
@@ -185,6 +199,16 @@ def textura_planeta(imagen: NDArray[np.uint8], nombre: str = "planeta") -> Textu
     textura.set_wrap_u(SamplerState.WM_repeat)
     textura.set_wrap_v(SamplerState.WM_clamp)
     return textura
+
+
+def texturas_motor(texturas: TexturasPlaneta, nombre: str = "") -> TexturasMotor:
+    """Las texturas de un planeta (`planetas.texturas_planeta`) como texturas del motor."""
+    color, emisivo, nubes = texturas
+    return (
+        textura_planeta(color, f"planeta-{nombre}"),
+        None if emisivo is None else textura_planeta(emisivo, f"lava-{nombre}"),
+        None if nubes is None else textura_planeta(nubes, f"nubes-{nombre}"),
+    )
 
 
 def _textura(datos: NDArray[np.uint8], nombre: str) -> Texture:
@@ -225,7 +249,7 @@ class Fondos:
         self._listos = {i: threading.Event() for i in range(1, FONDOS + 1)}
         self._listos[1].set()
         self._texturas: dict[int, Texture] = {}
-        self._texturas_planetas: dict[int, list[tuple[Texture, Texture | None]]] = {}
+        self._texturas_planetas: dict[int, list[TexturasMotor]] = {}
         faltan = [
             i
             for i in range(2, FONDOS + 1)
@@ -256,19 +280,15 @@ class Fondos:
             self._texturas[indice] = textura
         return textura
 
-    def texturas_planetas(self, indice: int) -> list[tuple[Texture, Texture | None]]:
-        """Texturas de color y de luz propia de cada planeta del fondo `indice`."""
+    def texturas_planetas(self, indice: int) -> list[TexturasMotor]:
+        """Texturas de color, de luz propia y de nubes de cada planeta del fondo `indice`."""
         if not 1 <= indice <= FONDOS:
             raise ValueError(f"El fondo {indice} no existe: van de 1 a {FONDOS}")
         texturas = self._texturas_planetas.get(indice)
         if texturas is None:
             self._listos[indice].wait()
             texturas = [
-                (
-                    textura_planeta(color, f"planeta-{indice}-{i}"),
-                    None if emisivo is None else textura_planeta(emisivo, f"lava-{indice}-{i}"),
-                )
-                for i, (color, emisivo) in enumerate(self._planetas.pop(indice))
+                texturas_motor(t, f"{indice}-{i}") for i, t in enumerate(self._planetas.pop(indice))
             ]
             self._texturas_planetas[indice] = texturas
         return texturas

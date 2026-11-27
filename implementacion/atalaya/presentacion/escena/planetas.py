@@ -19,7 +19,7 @@ from atalaya.presentacion.escena.ruido import Campo, fractal, suave
 
 #: Versión de las texturas de los planetas. Al cambiar su aspecto se sube, para no
 #: reutilizar en la caché texturas generadas con la versión anterior.
-VERSION = 1
+VERSION = 2
 
 #: Ancho de la textura de un planeta grande (y de uno pequeño); el alto es la mitad.
 ANCHO_GRANDE = 1024
@@ -30,6 +30,8 @@ _TAMANO_GRANDE = 7.0
 Color = tuple[float, float, float]
 Direccion = tuple[float, float, float]
 Textura = NDArray[np.uint8]
+#: Texturas de un planeta: color con la altura en el alfa, luz propia y nubes.
+Texturas = tuple[Textura, Textura | None, Textura | None]
 
 
 class Superficie(Enum):
@@ -60,6 +62,9 @@ class Planeta:
     inclinacion: tuple[float, float, float] = (0.0, 0.0, 0.0)
     #: Giro sobre su eje, en grados por segundo.
     giro: float = 0.4
+    #: Cobertura de nubes, de 0 (sin nubes) a 1, y su color.
+    nubes: float = 0.0
+    color_nubes: Color = (1.0, 1.0, 1.0)
     semilla: int = 0
 
 
@@ -110,6 +115,8 @@ PAISAJES: tuple[Paisaje, ...] = (
                 9.0,
                 atmosfera=(1.0, 0.72, 0.45),
                 inclinacion=(0, 0, 12),
+                nubes=0.3,
+                color_nubes=(0.95, 0.82, 0.64),
                 semilla=1,
             ),
             Planeta(Superficie.ROCOSO, _GRIS, (-0.36, 0.66, -0.16), 1.6, semilla=2),
@@ -127,6 +134,8 @@ PAISAJES: tuple[Paisaje, ...] = (
                 (0.62, -0.48, 0.42),
                 5.0,
                 atmosfera=(1.0, 0.35, 0.45),
+                nubes=0.5,
+                color_nubes=(1.0, 0.9, 0.9),
                 semilla=4,
             ),
         ),
@@ -146,6 +155,7 @@ PAISAJES: tuple[Paisaje, ...] = (
                 12.0,
                 atmosfera=(0.55, 0.85, 1.0),
                 inclinacion=(0, 0, -18),
+                nubes=0.4,
                 semilla=6,
             ),
             Planeta(Superficie.ROCOSO, _GRIS, (0.5, 0.68, -0.12), 1.4, semilla=7),
@@ -196,6 +206,8 @@ PAISAJES: tuple[Paisaje, ...] = (
                 (0.55, 0.6, 0.45),
                 7.5,
                 atmosfera=(1.0, 0.45, 0.2),
+                nubes=0.35,
+                color_nubes=(0.32, 0.28, 0.26),
                 semilla=13,
             ),
         ),
@@ -215,25 +227,55 @@ def ancho_textura(planeta: Planeta, divisor: int = 1) -> int:
     return (ANCHO_GRANDE if planeta.tamano >= _TAMANO_GRANDE else ANCHO_PEQUENO) // divisor
 
 
-def generar_texturas(indice: int, divisor: int = 1) -> list[tuple[Textura, Textura | None]]:
-    """Texturas de los planetas del fondo `indice`: color y, si brilla, luz propia."""
+def generar_texturas(indice: int, divisor: int = 1) -> list[Texturas]:
+    """Texturas de los planetas del fondo `indice` (`texturas_planeta`)."""
     return [texturas_planeta(p, divisor) for p in PAISAJES[indice - 1].planetas]
 
 
-def texturas_planeta(planeta: Planeta, divisor: int = 1) -> tuple[Textura, Textura | None]:
-    """Textura de color y, en los volcánicos, de luz propia de `planeta`.
+def texturas_planeta(planeta: Planeta, divisor: int = 1) -> Texturas:
+    """Texturas de `planeta`: color con la altura, luz propia (volcánicos) y nubes.
 
-    Mapa de latitud y longitud, forma `(ancho / 2, ancho, 3)`: la columna recorre la
-    longitud y la fila 0 es el polo sur, como las coordenadas de la esfera de
-    `paisaje.py`. El ruido se calcula sobre la dirección de cada punto, así que no hay
-    costura en el meridiano de cierre.
+    Mapas de latitud y longitud: la columna recorre la longitud y la fila 0 es el polo
+    sur, como las coordenadas de la esfera de `paisaje.py`. El de color tiene forma
+    `(ancho / 2, ancho, 4)`, con la altura del relieve en el canal alfa (la usan los
+    shaders; sin ellos, no se ve). El de nubes, en gris, tiene la mitad de resolución; solo
+    lo llevan los planetas con `nubes`. El ruido se calcula sobre la dirección de cada
+    punto, así que no hay costura en el meridiano de cierre.
     """
     ancho = ancho_textura(planeta, divisor)
+    color, altura, emisivo = _superficie(planeta, direcciones_mapa(ancho))
+    rango = float(altura.max() - altura.min())
+    altura = (altura - altura.min()) / rango if rango > 1e-6 else np.full_like(altura, 0.5)
+    rgba = np.concatenate([color, altura[..., None]], axis=-1)
+    nubes = textura_nubes(planeta, ancho // 2) if planeta.nubes > 0 else None
+    return _bytes(rgba), None if emisivo is None else _bytes(emisivo), nubes
+
+
+def textura_nubes(planeta: Planeta, ancho: int) -> Textura:
+    """Nubes de `planeta` en gris, forma `(ancho / 2, ancho)`: 0 despejado, 255 cubierto.
+
+    Ruido deformado en remolinos y algo estirado a lo largo de los paralelos.
+    """
     d = direcciones_mapa(ancho)
+    s = planeta.semilla * 97 + 500
+    remolino = np.stack([fractal(d * 1.8 + np.float32(k * 3.1), s + k, 3) for k in range(3)], -1)
+    p = (d + (remolino - 0.5) * np.float32(0.7)) * np.asarray((3.0, 3.0, 5.0), np.float32)
+    ruido = fractal(p, s + 7, 5)
+    # El ruido fractal se concentra cerca de 0,5: el umbral sale de su reparto real, así
+    # la parte cubierta es la que pide `nubes`.
+    umbral = float(np.quantile(ruido, 1.0 - planeta.nubes))
+    cubierta = suave(ruido, umbral, umbral + 1.2 * float(ruido.std()))
+    resultado: Textura = (cubierta * 255.0 + 0.5).astype(np.uint8)
+    return resultado
+
+
+def _superficie(planeta: Planeta, d: Campo) -> tuple[Campo, Campo, Campo | None]:
+    """Color, altura (sin normalizar) y luz propia de cada punto de la superficie."""
     s = planeta.semilla * 97
     c0, c1, c2 = (np.asarray(c, dtype=np.float32) for c in planeta.colores)
     latitud = np.arcsin(np.clip(d[..., 2], -1.0, 1.0))
     emisivo: Campo | None = None
+    altura: Campo
     if planeta.superficie is Superficie.GASEOSO:
         deformacion = fractal(d * 1.6, s, 3)
         desvio = (deformacion - 0.5) * 6.0
@@ -251,6 +293,8 @@ def texturas_planeta(planeta: Planeta, divisor: int = 1) -> tuple[Textura, Textu
         # Una gran tormenta ovalada en el hemisferio sur.
         tormenta = _mancha(d, latitud=-0.42, longitud=1.3, ancho=0.18, alto=0.09)
         color = _mezcla(color, c2 * np.float32(0.9) + c1 * np.float32(0.1), tormenta * 0.85)
+        # Sin relieve: un gigante gaseoso no tiene suelo.
+        altura = np.zeros(d.shape[:-1], dtype=np.float32)
     elif planeta.superficie is Superficie.HELADO:
         base = fractal(d * 3.0, s)
         color = _mezcla(c0, c1, suave(base, 0.3, 0.75))
@@ -258,6 +302,7 @@ def texturas_planeta(planeta: Planeta, divisor: int = 1) -> tuple[Textura, Textu
         color = _mezcla(color, c2, grietas * 0.4)
         casquete = suave(np.abs(np.sin(latitud)), 0.82, 0.92)
         color = _mezcla(color, np.asarray((0.95, 0.97, 1.0), np.float32), casquete)
+        altura = 0.6 * base - 0.5 * grietas + 0.15 * fractal(d * 12.0, s + 3)
     elif planeta.superficie is Superficie.VOLCANICO:
         base = fractal(d * 3.0, s)
         color = _mezcla(c0, c1, base)
@@ -265,17 +310,23 @@ def texturas_planeta(planeta: Planeta, divisor: int = 1) -> tuple[Textura, Textu
         color = _mezcla(color, c0 * np.float32(0.5), grietas)
         brillo = grietas * (0.55 + 0.45 * fractal(d * 9.0, s + 2))
         emisivo = brillo[..., None] * c2
+        altura = base - 0.6 * grietas + 0.2 * fractal(d * 14.0, s + 3)
     else:
         base = fractal(d * 2.5, s)
         detalle = fractal(d * 8.0, s + 1)
         color = _mezcla(c0, c1, suave(base, 0.25, 0.75))
+        altura = 0.6 * base + 0.25 * detalle
         if planeta.superficie is Superficie.DESIERTO:
             dunas = 0.5 + 0.5 * np.sin(latitud * 34.0 + base * 9.0)
             color = _mezcla(color, c2, dunas * detalle * 0.45)
+            altura = altura + 0.12 * dunas * detalle
         color = color * (0.85 + 0.3 * detalle[..., None])
         numero = 60 if planeta.superficie is Superficie.ROCOSO else 25
-        color = color * _crateres(d, np.random.default_rng(s), numero)[..., None]
-    return _bytes(color), None if emisivo is None else _bytes(emisivo)
+        crateres = _crateres(d, np.random.default_rng(s), numero)
+        color = color * crateres[..., None]
+        # Fondo hundido y borde levantado: el relieve sigue a la luz de los cráteres.
+        altura = altura + 1.6 * (crateres - 1.0)
+    return color, altura, emisivo
 
 
 def direcciones_mapa(ancho: int) -> Campo:
