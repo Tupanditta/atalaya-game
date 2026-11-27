@@ -6,7 +6,7 @@
     "recarga_energia": 8,
     "integridad_maxima": 100,
     "dano_disparo": 10,
-    "velocidad_giro": 90,
+    "velocidad_giro": 120,
     "campo_vision_normal": 70,
     "campo_vision_zoom": 25,
     "mira_normal": 2.5,
@@ -15,23 +15,26 @@
     "tiempo_vuelta_mira": 0.2
   },
   "tamanos": {
-    "pequeno": {"vida": 10, "velocidad_maxima": 110, "aceleracion_maxima": 55, "radio_impacto": 10},
-    "mediano": {"vida": 20, "velocidad_maxima": 70, "aceleracion_maxima": 35, "radio_impacto": 18},
-    "grande": {"vida": 40, "velocidad_maxima": 40, "aceleracion_maxima": 20, "radio_impacto": 32}
+    "pequeno": {"vida": 10, "velocidad_maxima": 880, "aceleracion_maxima": 1760, "radio_impacto": 20},
+    "mediano": {"vida": 20, "velocidad_maxima": 560, "aceleracion_maxima": 1120, "radio_impacto": 36},
+    "grande": {"vida": 40, "velocidad_maxima": 320, "aceleracion_maxima": 640, "radio_impacto": 64}
   },
   "tipos": {
-    "sin_efecto": {"dano": 3, "recarga": 4, "duracion_efecto": 0},
-    "desestabilizador": {"dano": 1, "recarga": 3, "duracion_efecto": 3},
-    "aturdidor": {"dano": 2, "recarga": 8, "duracion_efecto": 1.5}
+    "sin_efecto": {"dano": 3, "recarga": 1, "duracion_efecto": 0},
+    "desestabilizador": {"dano": 1, "recarga": 0.75, "duracion_efecto": 3},
+    "aturdidor": {"dano": 2, "recarga": 2, "duracion_efecto": 1.5}
   },
   "ataques": {
-    "duracion_aviso": 1,
+    "duracion_aviso": 0.3,
     "velocidad_proyectil": 300,
     "distancia_aparicion_minima": 900,
     "distancia_aparicion_maxima": 1000,
     "distancia_maxima": 1000,
     "alcance_disparo": 700,
-    "distancia_minima": 150,
+    "distancia_minima": 30,
+    "distancia_pasada_minima": 40,
+    "distancia_pasada_maxima": 90,
+    "duracion_espera": 3,
     "alcance_radar": 1200,
     "distancia_llegada": 50,
     "desvio_maximo": 2,

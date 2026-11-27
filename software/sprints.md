@@ -170,8 +170,8 @@ Comandos de verificación, desde la raíz del repositorio:
 | S2-T13 | RN-32 | 1000 apariciones con semilla fija | Distancia entre 900 y 1000 u; hay apariciones en los 8 octantes |
 | S2-T14 | Aparición | SolicitudAparicion de un enemigo mediano con vida 20 | EnemigoAparecido con su id, tipo y tamaño; vida 20 |
 | S2-T15 | RN-30, RN-31 | 6 enemigos durante 300 s simulados | En todos los pasos, la distancia de cada enemigo está entre 150 y 1000 u |
-| S2-T16 | RN-33 | 6 enemigos durante 300 s simulados | Velocidad ≤ 70 u/s. Entre dos pasos, el cambio de velocidad no supera 35 u/s² × 1/60 s ≈ 0,583 u/s. Desde parado, llega a la velocidad máxima en 2 s (±1 paso) |
-| S2-T17 | RN-33, llegada | Enemigo con un destino fijo en línea recta | Frena de forma gradual al acercarse. Al quedar a menos de 50 u del destino, elige otro destino |
+| S2-T16 | RN-33 | 6 enemigos durante 300 s simulados | Velocidad ≤ 560 u/s. Entre dos pasos, el cambio de velocidad no supera 1120 u/s² × 1/60 s ≈ 18,667 u/s. Desde parado, llega a la velocidad máxima en 0,5 s (±1 paso) |
+| S2-T17 | RN-33, llegada | Enemigo con un destino fijo en línea recta | Frena de forma gradual al acercarse. En bucle: ataca sin frenar y sobrepasa la estación muy cerca, se retira y espera 3 s lejos, moviéndose de lado |
 | S2-T18 | RN-29 | 6 enemigos durante 300 s simulados | Cada enemigo cambia de dirección en horizontal y en vertical |
 | S2-T19 | RN-07 | Enemigo mediano a 500 u justo delante; dos disparos en la dirección exacta | EnemigoAlcanzado con vida 10; después EnemigoDestruido con su posición, y deja de estar en la lista |
 | S2-T20 | Impacto, el más cercano | Dos enemigos alineados a 300 y 600 u | Solo se daña el de 300 u |
@@ -213,9 +213,9 @@ Cierra la fase 1.
 | ID | Comprueba | Escenario | Resultado esperado |
 |---|---|---|---|
 | S3-T01 | RN-42 | Enemigo a 800 u con la recarga terminada | No publica AvisoDisparo mientras está a más de 700 u. En 30 s simulados entra en el alcance y publica AvisoDisparo |
-| S3-T02 | RN-34 | Enemigo dentro del alcance publica AvisoDisparo | ProyectilLanzado 1 s después (±1 paso) |
+| S3-T02 | RN-34 | Enemigo dentro del alcance publica AvisoDisparo | ProyectilLanzado 0,3 s después (±1 paso) |
 | S3-T03 | RN-34 | Destruir el enemigo durante el aviso | No publica ProyectilLanzado |
-| S3-T04 | RN-14 | Enemigo sin efecto que sigue dentro del alcance | Entre un ProyectilLanzado y el siguiente AvisoDisparo pasan 4 s (±1 paso) |
+| S3-T04 | RN-14 | Enemigo sin efecto que sigue dentro del alcance | Entre un ProyectilLanzado y el siguiente AvisoDisparo pasa al menos 1 s (±1 paso), y justo 1 s si sigue atacando dentro del alcance |
 | S3-T05 | RN-35 | Proyectil lanzado desde 600 u | Avanza en línea recta hacia el centro a 300 u/s. ProyectilImpacta a los (600 − 5)/300 ≈ 1,983 s (±1 paso) |
 | S3-T06 | RN-36 | Destruir el enemigo con su proyectil en vuelo | El proyectil sigue y publica ProyectilImpacta |
 | S3-T07 | RN-10 | ProyectilImpacta de tipo sin efecto | Integridad 97. EstacionDanada (3, 97, 100) e IntegridadCambiada (97, 100) |
@@ -235,7 +235,7 @@ Cierra la fase 1.
 ### Comprobaciones manuales
 
 - **S3-M01:** el radar coincide con `interfaz/03-oleada.svg`. Un enemigo a la derecha de la vista aparece a la derecha del radar.
-- **S3-M02:** el aviso de disparo se ve y se oye 1 s antes de que salga el proyectil.
+- **S3-M02:** el aviso de disparo se ve y se oye 0,3 s antes de que salga el proyectil.
 - **S3-M03:** al recibir daño, la cámara tiembla, los bordes se tiñen de rojo y suena la alarma.
 - **S3-M04:** la integridad, el número de oleada y los enemigos restantes se actualizan en pantalla.
 - **S3-M05:** al llegar la integridad a cero aparece el resumen de derrota.
@@ -262,7 +262,7 @@ Cierra la fase 1.
 
 | ID | Comprueba | Escenario | Resultado esperado |
 |---|---|---|---|
-| S4-T01 | RN-06, RN-33 | Simular un enemigo de cada tamaño durante 300 s | Velocidad máxima observada ≤ 110, 70 y 40 u/s. Cambio de velocidad por paso ≤ 55, 35 y 20 u/s² × 1/60 s |
+| S4-T01 | RN-06, RN-33 | Simular un enemigo de cada tamaño durante 300 s | Velocidad máxima observada ≤ 880, 560 y 320 u/s. Cambio de velocidad por paso ≤ 1760, 1120 y 640 u/s² × 1/60 s |
 | S4-T02 | RN-06, zona de impacto | Enemigo a 500 u desplazado del eje del disparo: pequeño a 9 y 11 u; grande a 31 y 33 u | Pequeño: impacto con 9 u y fallo con 11 u. Grande: impacto con 31 u y fallo con 33 u |
 | S4-T03 | RN-06, vida | Disparos exactos en nivel 1 | Pequeño: 1 disparo; mediano: 2; grande: 4 |
 | S4-T04 | RN-11 | ProyectilImpacta de cada tipo con integridad 100 | Sin efecto: 97; desestabilizador: 99; aturdidor: 98 |
@@ -275,7 +275,7 @@ Cierra la fase 1.
 | S4-T11 | RN-38 | Aturdimiento con la barra pulsada | El progreso de apuntado vuelve a 0. Tras el aturdimiento, con la barra aún pulsada, no se apunta ni se dispara hasta soltarla y pulsarla otra vez |
 | S4-T12 | RN-04 | Aturdimiento de 1,5 s con energía 50 | La energía sube a 62 |
 | S4-T13 | RN-13, renovación | Segundo impacto aturdidor a los 1 s | Un solo AturdimientoTerminado, a los 2,5 s del primero |
-| S4-T14 | RN-14 | Enemigo de cada tipo que sigue dentro del alcance | Recarga entre disparos: sin efecto 4 s; desestabilizador 3 s; aturdidor 8 s |
+| S4-T14 | RN-14 | Enemigo de cada tipo que sigue dentro del alcance | Recarga entre disparos: sin efecto 1 s; desestabilizador 0,75 s; aturdidor 2 s |
 | S4-T15 | RN-16 | Generar con semilla fija 100 partidas de 50 oleadas | Oleadas 1 a 4: solo sin efecto. 5 a 9: sin aturdidores. En todas, enemigos con efecto ≤ parte entera de un tercio de la oleada. En la oleada 1 aparecen los tres tamaños a lo largo de las 100 partidas |
 | S4-T16 | RN-22 | SolicitudAparicion en nivel 1 | La vida coincide con la de su tamaño |
 

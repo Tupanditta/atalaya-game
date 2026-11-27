@@ -6,10 +6,18 @@ jugador no se aplica aquí: lo aplica `estacion` al recibir ProyectilImpacta.
 """
 
 import math
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import Enum
 
-from atalaya.logica.enemigos.movimiento import elegir_destino, mover, posicion_aparicion
+from atalaya.logica.enemigos.movimiento import (
+    Maniobra,
+    ha_sobrepasado,
+    mover,
+    posicion_aparicion,
+    punto_pasada,
+    punto_patrulla,
+    ruta_retirada,
+)
 from atalaya.logica.nucleo.azar import Azar
 from atalaya.logica.nucleo.bus import Bus
 from atalaya.logica.nucleo.dominio import Tamano, TipoEnemigo, Vector3
@@ -52,7 +60,8 @@ RADIO_ESTACION = 5.0
 class FaseAtaque(Enum):
     """Fase de ataque de un enemigo (`modulos/enemigos.md`, «Estado que gestiona»)."""
 
-    #: Recarga terminada: avisa en cuanto está dentro del alcance de disparo (RN-42).
+    #: Recarga terminada: avisa en cuanto, en plena maniobra de ataque, está dentro del
+    #: alcance de disparo (RN-42).
     ACERCANDOSE = "acercandose"
     #: Muestra el aviso de disparo antes de lanzar el proyectil (RN-34).
     AVISO = "aviso"
@@ -76,6 +85,7 @@ class EstadoEnemigo:
     fase: FaseAtaque
     #: Tiempo que le queda a la fase de aviso o de recarga; 0 al acercarse.
     tiempo_fase: float
+    maniobra: Maniobra = Maniobra.ATAQUE
 
 
 @dataclass(frozen=True, slots=True)
@@ -103,6 +113,15 @@ class _Enemigo:
     destino: Vector3
     fase: FaseAtaque = FaseAtaque.ACERCANDOSE
     tiempo_fase: float = 0.0
+    maniobra: Maniobra = Maniobra.ATAQUE
+    #: En el ataque, dirección de la pasada: al cruzar el plano del destino perpendicular
+    #: a ella, el enemigo ha sobrepasado la estación.
+    rumbo: Vector3 = CERO
+    #: En la retirada, puntos de paso que quedan tras el destino actual.
+    ruta: list[Vector3] = field(default_factory=list)
+    #: En la espera, tiempo que le queda y distancia a la estación a la que patrulla.
+    tiempo_espera: float = 0.0
+    radio_espera: float = 0.0
 
     def estado(self) -> EstadoEnemigo:
         return EstadoEnemigo(
@@ -116,6 +135,7 @@ class _Enemigo:
             self.destino,
             self.fase,
             self.tiempo_fase,
+            self.maniobra,
         )
 
 
@@ -203,11 +223,14 @@ class Enemigos:
     # --- internos --------------------------------------------------------------------
 
     def _mover_enemigos(self, dt: float) -> None:
-        """Mueve a cada enemigo hacia su destino y le da otro al llegar (RN-33)."""
+        """Avanza la maniobra de cada enemigo y lo mueve hacia su destino (RN-33).
+
+        Nunca frena: en el ataque y en la retirada va a toda velocidad y pasa de largo cada
+        punto. En la espera patrulla de lado, a media velocidad, a su distancia de espera.
+        """
         ataques = self._parametros.ataques
         for enemigo in self._activos.values():
-            if norma(restar(enemigo.destino, enemigo.posicion)) < ataques.distancia_llegada:
-                enemigo.destino = elegir_destino(enemigo.posicion, ataques, self._azar)
+            self._maniobrar(enemigo, dt)
             enemigo.posicion_anterior = enemigo.posicion
             enemigo.posicion, enemigo.velocidad = mover(
                 enemigo.posicion,
@@ -216,10 +239,74 @@ class Enemigos:
                 self._parametros.tamanos.de(enemigo.tamano),
                 ataques,
                 dt,
+                frenar=False,
+                patrulla=enemigo.radio_espera if enemigo.maniobra is Maniobra.ESPERA else None,
             )
 
+    def _maniobrar(self, enemigo: _Enemigo, dt: float) -> None:
+        """Pasa de una maniobra a la siguiente: ataque, retirada, espera y otra vez ataque."""
+        ataques = self._parametros.ataques
+        if enemigo.maniobra is Maniobra.ATAQUE:
+            if ha_sobrepasado(enemigo.posicion, enemigo.destino, enemigo.rumbo):
+                rapidez = norma(enemigo.velocidad)
+                rumbo = escalar(enemigo.velocidad, 1 / rapidez) if rapidez > 0 else enemigo.rumbo
+                enemigo.ruta = ruta_retirada(rumbo, ataques, self._azar)
+                enemigo.destino = enemigo.ruta.pop(0)
+                enemigo.maniobra = Maniobra.RETIRADA
+        elif enemigo.maniobra is Maniobra.RETIRADA:
+            if enemigo.ruta:
+                if self._alcanzado(enemigo):
+                    enemigo.destino = enemigo.ruta.pop(0)
+            elif norma(enemigo.posicion) >= ataques.distancia_aparicion_minima:
+                # Ya está lejos: empieza a patrullar a la distancia de espera.
+                enemigo.maniobra = Maniobra.ESPERA
+                enemigo.tiempo_espera = ataques.duracion_espera
+                # Algo por dentro de la distancia máxima, para corregir hacia los dos lados.
+                enemigo.radio_espera = self._azar.uniforme(
+                    ataques.distancia_aparicion_minima,
+                    min(
+                        ataques.distancia_aparicion_maxima,
+                        ataques.distancia_maxima - ataques.distancia_llegada,
+                    ),
+                )
+                self._seguir_patrulla(enemigo)
+        else:
+            enemigo.tiempo_espera -= dt
+            if enemigo.tiempo_espera <= _TOLERANCIA_TIEMPO:
+                self._empezar_ataque(enemigo)
+            elif self._alcanzado(enemigo):
+                self._seguir_patrulla(enemigo)
+
+    def _alcanzado(self, enemigo: _Enemigo) -> bool:
+        """Indica si ha llegado a su destino o si este ya le queda detrás."""
+        hacia = restar(enemigo.destino, enemigo.posicion)
+        return (
+            norma(hacia) < self._parametros.ataques.distancia_llegada
+            or producto_escalar(hacia, enemigo.velocidad) < 0
+        )
+
+    def _seguir_patrulla(self, enemigo: _Enemigo) -> None:
+        enemigo.destino = punto_patrulla(
+            enemigo.posicion, enemigo.velocidad, self._parametros.ataques, self._azar
+        )
+
+    def _empezar_ataque(self, enemigo: _Enemigo) -> None:
+        """Elige el punto de pasada junto a la estación y se lanza hacia él."""
+        datos = self._parametros.tamanos.de(enemigo.tamano)
+        enemigo.maniobra = Maniobra.ATAQUE
+        enemigo.destino = punto_pasada(
+            enemigo.posicion, datos, self._parametros.ataques, self._azar
+        )
+        enemigo.rumbo = normalizar(restar(enemigo.destino, enemigo.posicion))
+        enemigo.ruta = []
+        enemigo.tiempo_espera = 0.0
+
     def _atacar(self, enemigo: _Enemigo, dt: float) -> None:
-        """Avanza la fase de ataque: recarga, aviso y lanzamiento (RN-14, RN-34, RN-42)."""
+        """Avanza la fase de ataque: recarga, aviso y lanzamiento (RN-14, RN-34, RN-42).
+
+        Solo avisa mientras se lanza hacia la estación. La recarga sigue corriendo durante
+        la retirada y la espera.
+        """
         ataques = self._parametros.ataques
         if enemigo.fase is FaseAtaque.RECARGA:
             enemigo.tiempo_fase -= dt
@@ -228,7 +315,10 @@ class Enemigos:
             enemigo.fase, enemigo.tiempo_fase = FaseAtaque.ACERCANDOSE, 0.0
         if enemigo.fase is FaseAtaque.ACERCANDOSE:
             # Con la recarga terminada, el aviso empieza en el mismo paso.
-            if norma(enemigo.posicion) <= ataques.alcance_disparo:
+            if (
+                enemigo.maniobra is Maniobra.ATAQUE
+                and norma(enemigo.posicion) <= ataques.alcance_disparo
+            ):
                 enemigo.fase, enemigo.tiempo_fase = FaseAtaque.AVISO, ataques.duracion_aviso
                 self._bus.publicar(AvisoDisparo(enemigo.id))
             return
@@ -274,8 +364,10 @@ class Enemigos:
             posicion=posicion,
             posicion_anterior=posicion,
             velocidad=CERO,
-            destino=elegir_destino(posicion, ataques, self._azar),
+            destino=posicion,
         )
+        # Aparece lejos y empieza atacando (RN-32).
+        self._empezar_ataque(enemigo)
         self._siguiente_id += 1
         self._activos[enemigo.id] = enemigo
         self._bus.publicar(EnemigoAparecido(enemigo.id, enemigo.tipo, enemigo.tamano))

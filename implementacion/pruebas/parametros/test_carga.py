@@ -25,7 +25,7 @@ def test_s0_t09_carga_y_solo_lectura(parametros: Parametros) -> None:
 def test_consulta_por_tamano_tipo_y_mejora(parametros: Parametros) -> None:
     """Los grupos por tamaño, tipo y mejora se consultan con el vocabulario del dominio."""
     assert parametros.tamanos.de(Tamano.GRANDE) is parametros.tamanos.grande
-    assert parametros.tipos.de(TipoEnemigo.ATURDIDOR).recarga == 8
+    assert parametros.tipos.de(TipoEnemigo.ATURDIDOR).recarga == 2
     assert parametros.mejoras.de(Mejora.GENERADOR).efecto == 1
 
 
@@ -47,6 +47,24 @@ def test_s0_t11_valor_numerico_como_texto(datos_parametros: dict[str, Any]) -> N
     ("grupo", "clave", "valor", "relacion"),
     [
         ("ataques", "distancia_minima", 800, "ataques.distancia_minima < ataques.alcance_disparo"),
+        (
+            "ataques",
+            "distancia_pasada_minima",
+            20,
+            "ataques.distancia_minima < ataques.distancia_pasada_minima",
+        ),
+        (
+            "ataques",
+            "distancia_pasada_maxima",
+            35,
+            "ataques.distancia_pasada_minima <= ataques.distancia_pasada_maxima",
+        ),
+        (
+            "ataques",
+            "distancia_pasada_maxima",
+            750,
+            "ataques.distancia_pasada_maxima < ataques.alcance_disparo",
+        ),
         (
             "ataques",
             "alcance_disparo",

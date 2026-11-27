@@ -127,14 +127,14 @@ def test_s1_t07_estabilidad_numerica(parametros: Parametros) -> None:
 
 
 def test_s1_t08_rn40_giro_mas_lento_con_zoom(parametros: Parametros) -> None:
-    """S1-T08 RN-40: con la mira mínima, un paso gira 1,5° × 25/70."""
+    """S1-T08 RN-40: con la mira mínima, un paso gira 2° × 25/70."""
     vista, bus = _vista(parametros)
     bus.publicar(ApuntadoCambiado(progreso=1.0))
     bus.entregar()
     _girar(vista, 1, 0, 1)
     j = parametros.jugador
     esperado = j.velocidad_giro * PASO * j.campo_vision_zoom / j.campo_vision_normal
-    assert esperado == pytest.approx(1.5 * 25 / 70)
+    assert esperado == pytest.approx(2 * 25 / 70)
     assert _angulo(vista.adelante, ADELANTE) == pytest.approx(esperado, abs=1e-9)
 
 
@@ -155,10 +155,10 @@ def test_s1_t09_rn39_campo_de_vision(parametros: Parametros, progreso: float) ->
 
 
 def test_s1_t10_rnf04_giro_constante(parametros: Parametros) -> None:
-    """S1-T10 RNF-04: flecha derecha durante 120 pasos gira exactamente 1,5° cada paso."""
+    """S1-T10 RNF-04: flecha derecha durante 120 pasos gira exactamente 2° cada paso."""
     vista, _ = _vista(parametros)
     esperado = parametros.jugador.velocidad_giro * PASO
-    assert esperado == pytest.approx(1.5)
+    assert esperado == pytest.approx(2.0)
     for _ in range(120):
         antes = vista.adelante
         _girar(vista, 1, 0, 1)

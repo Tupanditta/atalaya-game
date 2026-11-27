@@ -56,7 +56,7 @@ Las versiones exactas se fijan en `implementacion/requirements.txt` (y `requirem
 - **Giro:** ángulo por paso = velocidad sin zoom × (campo de visión actual ÷ campo normal) × duración del paso (RN-40).
 - **Dirección del disparo** (RN-37): la dirección de la mira que da `vista`, sin dispersión. Incluye el desvío por desestabilización (RN-12).
 - **Impacto:** se calcula de forma exacta la intersección de la línea del disparo con la esfera de impacto de cada enemigo, y gana la más cercana. Con 6 enemigos activos como máximo, el coste es despreciable.
-- **Movimiento de los enemigos** (RN-33): comportamiento de persecución con aceleración y velocidad máximas, y frenado al acercarse al destino. Se limita a la capa entre la distancia mínima y la máxima.
+- **Movimiento de los enemigos** (RN-30, RN-33): comportamiento de persecución con aceleración y velocidad máximas, en un bucle de tres maniobras: ataque sin frenar hacia un punto de pasada junto a la estación, retirada por puntos de paso y espera lejos patrullando de lado. Nunca frena: en la espera, la velocidad deseada es lateral, a media velocidad, con una corrección de la distancia a la estación. Se limita a la capa entre la distancia mínima y la máxima.
 - **Proyectiles enemigos:** movimiento rectilíneo uniforme hacia el centro de la estación. Impactan al entrar en un radio de 5 u.
 - **Azar:** un generador con semilla por partida, que da el núcleo. Las pruebas usan semillas fijas.
 

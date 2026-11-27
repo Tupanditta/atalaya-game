@@ -137,9 +137,9 @@ class Rayo:
         )
         self._nodo = padre.attach_new_node("rayo")
         for grosor, color, alfa in (
-            (14.0, _COLOR_RAYO, 0.28),
-            (6.0, _COLOR_RAYO, 0.85),
-            (2.5, (1.0, 1.0, 1.0), 1.0),
+            (22.0, _COLOR_RAYO, 0.30),
+            (10.0, _COLOR_RAYO, 0.90),
+            (4.0, (1.0, 1.0, 1.0), 1.0),
         ):
             linea = LineSegs("rayo")
             linea.set_thickness(grosor)

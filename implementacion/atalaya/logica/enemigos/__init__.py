@@ -12,10 +12,15 @@ from atalaya.logica.enemigos.enemigos import (
     distancia_impacto,
 )
 from atalaya.logica.enemigos.movimiento import (
-    elegir_destino,
+    Maniobra,
+    ha_sobrepasado,
     mover,
     posicion_aparicion,
+    punto_pasada,
+    punto_patrulla,
+    ruta_retirada,
     velocidad_llegada,
+    velocidad_paso,
 )
 
 __all__ = [
@@ -24,9 +29,14 @@ __all__ = [
     "EstadoEnemigo",
     "EstadoProyectil",
     "FaseAtaque",
+    "Maniobra",
     "distancia_impacto",
-    "elegir_destino",
+    "ha_sobrepasado",
     "mover",
     "posicion_aparicion",
+    "punto_pasada",
+    "punto_patrulla",
+    "ruta_retirada",
     "velocidad_llegada",
+    "velocidad_paso",
 ]

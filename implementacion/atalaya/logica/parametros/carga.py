@@ -100,6 +100,18 @@ _RELACIONES: list[tuple[str, Callable[[Parametros], bool]]] = [
         lambda p: p.ataques.distancia_minima < p.ataques.alcance_disparo,
     ),
     (
+        "ataques.distancia_minima < ataques.distancia_pasada_minima",
+        lambda p: p.ataques.distancia_minima < p.ataques.distancia_pasada_minima,
+    ),
+    (
+        "ataques.distancia_pasada_minima <= ataques.distancia_pasada_maxima",
+        lambda p: p.ataques.distancia_pasada_minima <= p.ataques.distancia_pasada_maxima,
+    ),
+    (
+        "ataques.distancia_pasada_maxima < ataques.alcance_disparo",
+        lambda p: p.ataques.distancia_pasada_maxima < p.ataques.alcance_disparo,
+    ),
+    (
         "ataques.alcance_disparo < ataques.distancia_maxima",
         lambda p: p.ataques.alcance_disparo < p.ataques.distancia_maxima,
     ),

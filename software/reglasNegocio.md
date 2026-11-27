@@ -83,19 +83,19 @@ Reglas del juego que el sistema debe respetar, independientes de la tecnología.
 - **Estado:** Confirmado
 
 ### RN-29. Trayectoria en tres dimensiones
-- **Regla:** Los enemigos se mueven y cambian de dirección en horizontal y en vertical mientras se acercan, de modo que seguirlos puede exigir giros altos o combinados.
+- **Regla:** Los enemigos se mueven y cambian de dirección en horizontal y en vertical mientras se acercan y se alejan, de modo que seguirlos puede exigir giros altos o combinados.
 - **Prioridad:** Alta
 - **Origen:** Usuario
 - **Estado:** Confirmado
 
 ### RN-30. Distancia variable
-- **Regla:** Los enemigos pueden acercarse a la estación y alejarse de ella durante la oleada, siempre entre la distancia mínima y la distancia máxima. Como aparecen dentro del alcance del radar y la distancia máxima es menor que ese alcance, un enemigo nunca sale del radar.
+- **Regla:** Cada enemigo repite en bucle tres maniobras: se lanza hacia la estación a toda velocidad y la sobrepasa muy cerca; se aleja describiendo curvas hasta la distancia de espera; y se mantiene a esa distancia un momento, moviéndose de lado alrededor de la estación, antes de volver a atacar. Siempre está entre la distancia mínima y la distancia máxima. Como la distancia máxima es menor que el alcance del radar, un enemigo nunca sale del radar. Por su velocidad, es más fácil acertarle de lejos que de cerca.
 - **Prioridad:** Media
 - **Origen:** Usuario
 - **Estado:** Confirmado
 
 ### RN-31. Sin colisiones
-- **Regla:** Los enemigos nunca chocan con la estación ni se acercan más que la distancia mínima. Solo la dañan con sus disparos.
+- **Regla:** Los enemigos nunca chocan con la estación ni se acercan más que la distancia mínima. Al sobrepasarla, pasan de lado a la distancia de pasada más el radio de su zona de impacto. Solo la dañan con sus disparos.
 - **Prioridad:** Alta
 - **Origen:** Usuario
 - **Estado:** Confirmado
@@ -113,7 +113,7 @@ Reglas del juego que el sistema debe respetar, independientes de la tecnología.
 - **Estado:** Confirmado
 
 ### RN-42. Alcance de disparo enemigo
-- **Regla:** Un enemigo solo dispara cuando está a una distancia de la estación menor o igual que su alcance de disparo. Mientras está más lejos, se acerca.
+- **Regla:** Un enemigo solo dispara mientras se lanza hacia la estación y está a una distancia menor o igual que su alcance de disparo. Mientras se aleja o espera, no dispara.
 - **Prioridad:** Alta
 - **Origen:** Decisión delegada por el usuario
 - **Estado:** Confirmado
@@ -337,7 +337,7 @@ Valores de partida para implementar el juego y ajustarlo durante las pruebas. Ca
 | Recarga de energía | 8 por segundo | RN-04 |
 | Integridad máxima | 100 | RN-02 |
 | Daño de un disparo del jugador | 10 puntos de vida | RN-07 |
-| Velocidad de giro sin zoom | 90 °/s en cada eje | RN-40 |
+| Velocidad de giro sin zoom | 120 °/s en cada eje | RN-40 |
 | Campo de visión sin zoom | 70° | RN-39 |
 | Campo de visión con zoom máximo | 25° | RN-39 |
 | Tamaño normal de la mira (radio del círculo) | 2,5° | RN-38 |
@@ -349,34 +349,36 @@ Valores de partida para implementar el juego y ajustarlo durante las pruebas. Ca
 
 | Tamaño | Vida en nivel 1 | Velocidad máxima | Aceleración máxima | Radio de la zona de impacto |
 |---|---|---|---|---|
-| Pequeño | 10 | 110 u/s | 55 u/s² | 10 u |
-| Mediano | 20 | 70 u/s | 35 u/s² | 18 u |
-| Grande | 40 | 40 u/s | 20 u/s² | 32 u |
+| Pequeño | 10 | 880 u/s | 1760 u/s² | 20 u |
+| Mediano | 20 | 560 u/s | 1120 u/s² | 36 u |
+| Grande | 40 | 320 u/s | 640 u/s² | 64 u |
 
-Con estos radios, un enemigo grande se acierta siempre con un disparo rápido bien centrado a media distancia, y un mediano, unas dos de cada tres veces. Un enemigo pequeño lejano exige reducir la mira.
+La zona de impacto mide el doble que la nave dibujada, para que el disparo sea certero aunque los enemigos se muevan deprisa.
 
-Con estas aceleraciones, cada enemigo tarda 2 s en pasar de parado a su velocidad máxima (RN-33). A velocidad máxima, su giro más cerrado tiene un radio de 220 u (pequeño), 140 u (mediano) y 80 u (grande). El enemigo empieza a frenar cuando la distancia a su destino es igual a la que necesita para detenerse con su aceleración máxima.
+Con estas aceleraciones, cada enemigo tarda 0,5 s en pasar de parado a su velocidad máxima (RN-33). A velocidad máxima, su giro más cerrado tiene un radio de 440 u (pequeño), 280 u (mediano) y 160 u (grande). Nunca frena: sobrepasa la estación y se retira a su velocidad máxima. Durante la espera se mueve de lado a la mitad de su velocidad máxima.
 
 ### Enemigos por tipo
 
 | Tipo | Daño a la integridad | Tiempo de recarga | Efecto |
 |---|---|---|---|
-| Sin efecto especial | 3 | 4 s | ninguno |
-| Desestabilizador | 1 | 3 s | temblor durante 3 s |
-| Aturdidor | 2 | 8 s | aturdimiento durante 1,5 s |
+| Sin efecto especial | 3 | 1 s | ninguno |
+| Desestabilizador | 1 | 0,75 s | temblor durante 3 s |
+| Aturdidor | 2 | 2 s | aturdimiento durante 1,5 s |
 
 ### Ataques y distancias
 
 | Parámetro | Valor | Regla |
 |---|---|---|
-| Duración del aviso de disparo | 1 s | RN-34 |
+| Duración del aviso de disparo | 0,3 s | RN-34 |
 | Velocidad de los proyectiles enemigos | 300 u/s | RN-35 |
-| Distancia de aparición | entre 900 y 1000 u | RN-32 |
+| Distancia de aparición y de espera | entre 900 y 1000 u | RN-30, RN-32 |
 | Distancia máxima | 1000 u | RN-30 |
 | Alcance de disparo enemigo | 700 u | RN-42 |
-| Distancia mínima | 150 u | RN-31 |
+| Distancia mínima | 30 u | RN-31 |
+| Distancia de pasada (más el radio de la zona de impacto del enemigo) | entre 40 y 90 u | RN-31 |
+| Duración de la espera lejos de la estación | 3 s | RN-30 |
 | Alcance del radar | 1200 u | RF-07 |
-| Distancia de llegada al destino (a menos de esta distancia, el enemigo elige otro destino) | 50 u | RN-33 |
+| Distancia de llegada a un punto de la retirada (a menos de esta distancia, sigue al siguiente o empieza a esperar) | 50 u | RN-33 |
 | Desestabilización: desvío máximo de la mira respecto al centro | 2° | RN-12 |
 | Desestabilización: velocidad máxima del desvío | 30 °/s | RN-12 |
 | Enemigos activos a la vez | como máximo 6 | RN-43 |

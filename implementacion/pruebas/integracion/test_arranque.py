@@ -24,14 +24,19 @@ class TecladoFalso:
         return True
 
 
+def _pasos_90_grados(parametros: Parametros) -> int:
+    """Pasos que tarda la vista en girar 90° sin zoom (RN-40)."""
+    return round(90 / (parametros.jugador.velocidad_giro * PASO))
+
+
 def test_flecha_derecha_gira_la_vista(parametros: Parametros) -> None:
-    """RF-02: con los módulos montados, mantener la flecha derecha 1 s gira 90°."""
+    """RF-02: con los módulos montados, mantener la flecha derecha 0,75 s gira 90°."""
     teclado = TecladoFalso()
     juego = montar(parametros, teclado, semilla=1)
     juego.flujo.iniciar_partida()
     derecha = juego.vista.derecha
     teclado.teclas = {"arrow_right"}
-    for _ in range(60):
+    for _ in range(_pasos_90_grados(parametros)):
         juego.nucleo.avanzar(PASO)
     assert juego.flujo.pantalla is Pantalla.OLEADA_EN_CURSO
     assert juego.vista.adelante == pytest.approx(derecha, abs=1e-9)
@@ -134,7 +139,7 @@ def test_wasd_y_clic(parametros: Parametros) -> None:
     juego.flujo.iniciar_partida()
     derecha = juego.vista.derecha
     teclado.teclas = {"d"}
-    for _ in range(60):
+    for _ in range(_pasos_90_grados(parametros)):
         juego.nucleo.avanzar(PASO)
     assert juego.vista.adelante == pytest.approx(derecha, abs=1e-9)
     teclado.teclas = {"mouse1"}

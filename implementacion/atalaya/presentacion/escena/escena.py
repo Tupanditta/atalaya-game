@@ -88,6 +88,10 @@ _SALIDA_RAYO: Vector3 = (0.35, 1.0, -0.45)
 _POSICION_MOTOR = -0.8
 _TAMANO_MOTOR = 0.55
 
+#: Radio del modelo de un enemigo, en fracción del radio de su zona de impacto. La zona
+#: de impacto es más amplia que la nave para que el disparo sea más certero (RN-06).
+_ESCALA_MODELO = 0.5
+
 #: Sacudida de la cámara por una explosión: grados por cada unidad de radio del enemigo
 #: dividida por su distancia, y máximo.
 _SACUDIDA_POR_RADIO = 6.0
@@ -409,7 +413,8 @@ class Escena:
             dibujo.colocar(a + (b - a) * fraccion, Vec3(*proyectil.velocidad))
 
     def _radio(self, tamano: Tamano) -> float:
-        return self._parametros.tamanos.de(tamano).radio_impacto
+        """Radio del modelo del enemigo, con el que se dibujan la nave y sus efectos."""
+        return self._parametros.tamanos.de(tamano).radio_impacto * _ESCALA_MODELO
 
     # --- efectos ---------------------------------------------------------------------
 

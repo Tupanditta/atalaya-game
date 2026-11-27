@@ -11,20 +11,21 @@ Mantener los enemigos y sus proyectiles: crearlos, moverlos, hacerlos atacar y r
   - identificador, tipo, tamaño,
   - vida actual,
   - posición, velocidad,
+  - maniobra (ataque, retirada o espera), destino actual y puntos de paso que le quedan,
   - fase de ataque (acercándose, en recarga o en aviso) y tiempo restante de esa fase.
 - Para cada proyectil en vuelo: tipo del enemigo que lo disparó, posición y velocidad.
 
 ## Comportamiento de un enemigo
-1. **Aparición:** al recibir SolicitudAparicion, crea el enemigo en una dirección al azar, a la distancia de aparición (RN-32). Empieza en fase de acercamiento.
-2. **Movimiento con inercia (RN-33):**
-   - Cada enemigo tiene un punto de destino. Lo persigue con una aceleración limitada y sin pasar de su velocidad máxima, así que describe curvas.
-   - Cuando llega cerca del destino, elige otro al azar. Los destinos combinan cambios de dirección horizontales y verticales (RN-29) y de distancia (RN-30).
-   - Los destinos siempre están entre la distancia mínima y la máxima. Si un enemigo se acerca al límite, se le frena y se le desvía de forma gradual (RN-31).
-3. **Ataque:**
-   - Fuera del alcance de disparo, el destino se elige dentro del alcance (RN-42).
-   - Dentro del alcance y con la recarga terminada, pasa a fase de aviso y publica AvisoDisparo (RN-34).
+1. **Aparición:** al recibir SolicitudAparicion, crea el enemigo en una dirección al azar, a la distancia de aparición (RN-32). Empieza atacando, en fase de acercamiento.
+2. **Movimiento con inercia (RN-33):** cada enemigo persigue su destino con una aceleración limitada y sin pasar de su velocidad máxima, así que describe curvas. Si se acerca a la distancia máxima, se le frena de forma gradual. Si va a pasar a menos de la distancia mínima, también (RN-31); si pasa de lado, no.
+3. **Maniobras, en bucle (RN-30):**
+   - **Ataque:** elige un punto de pasada de lado junto a la estación, a la distancia de pasada más el radio de su zona de impacto, y se lanza hacia él sin frenar. Al cruzar el plano de ese punto, perpendicular a su rumbo, ha sobrepasado la estación y empieza la retirada.
+   - **Retirada:** sigue a toda velocidad dos puntos de paso, cada uno más lejos y girado entre 20° y 45° respecto al anterior (RN-29). Un punto de paso que ya queda detrás cuenta como alcanzado. Después sigue hacia un tercer punto y, al llegar a la distancia de aparición, empieza a esperar.
+   - **Espera:** durante la duración de la espera patrulla de lado alrededor de la estación, a media velocidad, hacia puntos girados 25° y desviados hasta 50° del sentido de la marcha. Corrige poco a poco su distancia hacia una distancia de espera al azar entre la de aparición mínima y 50 u menos que la máxima. Después vuelve a atacar.
+4. **Ataque:**
+   - Solo durante la maniobra de ataque, dentro del alcance de disparo y con la recarga terminada, pasa a fase de aviso y publica AvisoDisparo (RN-34, RN-42).
    - Al terminar el aviso, lanza un proyectil hacia la estación (RN-35), publica ProyectilLanzado y pasa a fase de recarga, con el tiempo de recarga de su tipo (RN-14).
-4. **Proyectiles:**
+5. **Proyectiles:**
    - Avanzan en línea recta hacia la estación a velocidad constante.
    - Al llegar, publican ProyectilImpacta y desaparecen.
    - Un proyectil no desaparece aunque su enemigo sea destruido (RN-36).
@@ -38,7 +39,7 @@ Al recibir DisparoRealizado:
 
 ## Operaciones
 - **Actualizar:** mueve enemigos y proyectiles y avanza sus fases.
-- **Consultar:** lista de enemigos activos (id, tipo, tamaño, posición, fase); lista de proyectiles.
+- **Consultar:** lista de enemigos activos (id, tipo, tamaño, posición, fase, maniobra); lista de proyectiles.
 
 ## Eventos
 - Publica: EnemigoAparecido, AvisoDisparo, ProyectilLanzado, ProyectilImpacta, EnemigoAlcanzado, EnemigoDestruido.

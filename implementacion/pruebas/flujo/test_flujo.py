@@ -84,12 +84,17 @@ def test_antes_de_la_partida_no_gira(parametros: Parametros) -> None:
     assert _cerca(vista.adelante, ADELANTE)
 
 
+def _pasos_90_grados(parametros: Parametros) -> int:
+    """Pasos que tarda la vista en girar 90° sin zoom (RN-40)."""
+    return round(90 / (parametros.jugador.velocidad_giro * PASO))
+
+
 def test_flechas_giran_la_vista(parametros: Parametros) -> None:
     """RF-02: durante la oleada, flecha derecha gira la vista a la derecha."""
     nucleo, _, vista, acciones = _montar(parametros)
     derecha = vista.derecha
     acciones.mantenidas = {Accion.DERECHA}
-    _pasos(nucleo, 60)
+    _pasos(nucleo, _pasos_90_grados(parametros))
     assert _cerca(vista.adelante, derecha)
 
 
@@ -109,7 +114,7 @@ def test_s1_t03_rn26_flechas_opuestas(
     nucleo, _, vista, acciones = _montar(parametros)
     arriba = vista.arriba
     acciones.mantenidas = mantenidas
-    _pasos(nucleo, 60)
+    _pasos(nucleo, _pasos_90_grados(parametros))
     if gira_arriba:
         assert _cerca(vista.adelante, arriba)
     else:

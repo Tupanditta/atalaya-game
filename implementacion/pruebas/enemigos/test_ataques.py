@@ -6,7 +6,7 @@ from typing import TypeVar
 
 import pytest
 
-from atalaya.logica.enemigos import RADIO_ESTACION, Enemigos, FaseAtaque
+from atalaya.logica.enemigos import RADIO_ESTACION, Enemigos, FaseAtaque, Maniobra
 from atalaya.logica.nucleo import PASO, Azar, Bus, Evento
 from atalaya.logica.nucleo.dominio import Tamano, TipoEnemigo, Vector3
 from atalaya.logica.nucleo.eventos import (
@@ -44,10 +44,14 @@ class Simulacion:
         return self.enemigos.activos[-1].id
 
     def colocar(self, id: int, posicion: Vector3) -> None:
-        """Pone al enemigo `id` en `posicion`, parado. Solo para preparar las pruebas."""
+        """Pone al enemigo `id` en `posicion`, parado y empezando un ataque.
+
+        Solo para preparar las pruebas.
+        """
         enemigo = self.enemigos._activos[id]
         enemigo.posicion = enemigo.posicion_anterior = posicion
         enemigo.velocidad = CERO
+        self.enemigos._empezar_ataque(enemigo)
 
     def avanzar(self, pasos: int = 1) -> None:
         for _ in range(pasos):
@@ -90,6 +94,32 @@ def _pasos(segundos: float) -> int:
     return round(segundos / PASO)
 
 
+def _huecos(sim: Simulacion, tipo: TipoEnemigo) -> list[int]:
+    """Pasos entre cada lanzamiento y el aviso siguiente."""
+    avisos = [p for p, _ in sim.de(AvisoDisparo)]
+    lanzados = [p for p, e in sim.de(ProyectilLanzado) if e.tipo_enemigo is tipo]
+    assert len(lanzados) >= 4
+    return [s - lanzado for lanzado, s in zip(lanzados, avisos[1:], strict=False)]
+
+
+def _comprobar_recarga(sim: Simulacion, recarga: float, tipo: TipoEnemigo) -> None:
+    """Moviéndose libremente, entre un lanzamiento y el aviso siguiente pasa al menos la recarga.
+
+    Puede pasar más, porque el enemigo no dispara mientras se retira ni mientras espera.
+    """
+    assert all(h >= _pasos(recarga) - 1 for h in _huecos(sim, tipo))
+
+
+def _comprobar_recarga_fijo(parametros: Parametros, recarga: float, tipo: TipoEnemigo) -> None:
+    """Con el enemigo atacando siempre a 500 u, entre lanzamiento y aviso pasa justo la recarga."""
+    sim = Simulacion(parametros)
+    id = sim.aparecer(tipo)
+    for _ in range(_pasos(20)):
+        sim.colocar(id, (0.0, 500.0, 0.0))
+        sim.avanzar()
+    assert all(abs(h - _pasos(recarga)) <= 1 for h in _huecos(sim, tipo))
+
+
 def test_empieza_acercandose_con_la_recarga_terminada(parametros: Parametros) -> None:
     """Un enemigo recién aparecido está en fase de acercamiento y puede atacar."""
     sim = Simulacion(parametros)
@@ -121,7 +151,7 @@ def test_s3_t01_rn42_solo_dispara_dentro_del_alcance(parametros: Parametros) -> 
 
 
 def test_s3_t02_rn34_proyectil_un_segundo_despues_del_aviso(parametros: Parametros) -> None:
-    """S3-T02 RN-34: ProyectilLanzado llega 1 s (±1 paso) después de AvisoDisparo."""
+    """S3-T02 RN-34: ProyectilLanzado llega 0,3 s (±1 paso) después de AvisoDisparo."""
     sim = Simulacion(parametros)
     id = sim.aparecer()
     sim.colocar(id, (0.0, 500.0, 0.0))
@@ -143,7 +173,7 @@ def test_s3_t03_rn34_destruido_durante_el_aviso(parametros: Parametros) -> None:
     id = sim.aparecer()
     sim.colocar(id, (0.0, 500.0, 0.0))
     sim.avanzar_hasta(AvisoDisparo, 10)
-    sim.avanzar(_pasos(0.5))
+    sim.avanzar(_pasos(parametros.ataques.duracion_aviso / 2))
     sim.destruir(id)
     sim.avanzar(_pasos(3))
     assert sim.de(ProyectilLanzado) == []
@@ -151,17 +181,29 @@ def test_s3_t03_rn34_destruido_durante_el_aviso(parametros: Parametros) -> None:
 
 
 def test_s3_t04_rn14_recarga_entre_ataques(parametros: Parametros) -> None:
-    """S3-T04 RN-14: entre un ProyectilLanzado y el siguiente AvisoDisparo pasan 4 s."""
+    """S3-T04 RN-14: entre un ProyectilLanzado y el siguiente AvisoDisparo pasa al menos 1 s."""
     sim = Simulacion(_siempre_al_alcance(parametros))
     sim.aparecer()
-    sim.avanzar(_pasos(30))
-    avisos = [p for p, _ in sim.de(AvisoDisparo)]
-    lanzados = [p for p, _ in sim.de(ProyectilLanzado)]
-    recarga = _pasos(parametros.tipos.sin_efecto.recarga)
-    assert recarga == _pasos(4)
-    assert len(lanzados) >= 5
-    for lanzado, siguiente in zip(lanzados, avisos[1:], strict=False):
-        assert abs((siguiente - lanzado) - recarga) <= 1
+    sim.avanzar(_pasos(40))
+    assert parametros.tipos.sin_efecto.recarga == 1
+    _comprobar_recarga(sim, 1, TipoEnemigo.SIN_EFECTO)
+    _comprobar_recarga_fijo(parametros, 1, TipoEnemigo.SIN_EFECTO)
+
+
+def test_solo_dispara_al_atacar(parametros: Parametros) -> None:
+    """Solo avisa y dispara mientras se lanza hacia la estación, no al retirarse ni al esperar."""
+    sim = Simulacion(parametros)
+    id = sim.aparecer()
+    maniobras = []
+    for _ in range(_pasos(120)):
+        avisos = len(sim.de(AvisoDisparo))
+        sim.avanzar()
+        if len(sim.de(AvisoDisparo)) > avisos:
+            enemigo = sim.enemigos.enemigo(id)
+            assert enemigo is not None
+            maniobras.append(enemigo.maniobra)
+    assert len(maniobras) >= 6
+    assert set(maniobras) == {Maniobra.ATAQUE}
 
 
 def test_s3_t05_rn35_proyectil_en_linea_recta(parametros: Parametros) -> None:
@@ -173,9 +215,12 @@ def test_s3_t05_rn35_proyectil_en_linea_recta(parametros: Parametros) -> None:
         sim.colocar(id, (0.0, 600.0, 0.0))
         sim.avanzar()
     lanzado = sim.paso
+    # Sin su enemigo, no sale otro proyectil mientras se mide este (RN-36).
+    sim.destruir(id)
     (proyectil,) = sim.enemigos.proyectiles
     salida = proyectil.posicion
-    assert norma(salida) == pytest.approx(600, abs=0.1)
+    # En el paso del lanzamiento, el enemigo ya ha empezado a moverse: menos de 1 u.
+    assert norma(salida) == pytest.approx(600, abs=1)
     rapidez = parametros.ataques.velocidad_proyectil
     assert rapidez == 300
     assert norma(proyectil.velocidad) == pytest.approx(rapidez)
@@ -227,7 +272,7 @@ def test_s3_t06_rn36_proyectil_sigue_sin_su_enemigo(parametros: Parametros) -> N
     assert sim.enemigos.activos == ()
     assert len(sim.enemigos.proyectiles) == 1
     sim.avanzar_hasta(ProyectilImpacta, _pasos(3))
-    assert sim.enemigos.proyectiles == ()
+    assert len(sim.enemigos.proyectiles) == 0
 
 
 def test_aviso_continua_al_salir_del_alcance(parametros: Parametros) -> None:
@@ -287,19 +332,16 @@ def test_proyectiles_en_orden_y_con_su_posicion_anterior(parametros: Parametros)
 
 @pytest.mark.parametrize(
     ("tipo", "recarga"),
-    [(TipoEnemigo.SIN_EFECTO, 4), (TipoEnemigo.DESESTABILIZADOR, 3), (TipoEnemigo.ATURDIDOR, 8)],
+    [(TipoEnemigo.SIN_EFECTO, 1), (TipoEnemigo.DESESTABILIZADOR, 0.75), (TipoEnemigo.ATURDIDOR, 2)],
     ids=lambda v: v.value if isinstance(v, TipoEnemigo) else str(v),
 )
 def test_s4_t14_rn14_recarga_por_tipo(
     parametros: Parametros, tipo: TipoEnemigo, recarga: float
 ) -> None:
-    """S4-T14 RN-14: recarga entre disparos de 4 s (sin efecto), 3 s y 8 s (aturdidor)."""
+    """S4-T14 RN-14: recarga entre disparos de 1 s (sin efecto), 0,75 s y 2 s (aturdidor)."""
     assert parametros.tipos.de(tipo).recarga == recarga
     sim = Simulacion(_siempre_al_alcance(parametros))
     sim.aparecer(tipo)
     sim.avanzar(_pasos(40))
-    avisos = [p for p, _ in sim.de(AvisoDisparo)]
-    lanzados = [p for p, e in sim.de(ProyectilLanzado) if e.tipo_enemigo is tipo]
-    assert len(lanzados) >= 4
-    for lanzado, siguiente in zip(lanzados, avisos[1:], strict=False):
-        assert abs((siguiente - lanzado) - _pasos(recarga)) <= 1
+    _comprobar_recarga(sim, recarga, tipo)
+    _comprobar_recarga_fijo(parametros, recarga, tipo)

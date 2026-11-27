@@ -78,18 +78,25 @@ ESPERADO: dict[tuple[str, str], Esperado] = {
     ("Ataques y distancias", "Velocidad de los proyectiles enemigos"): lambda p: [
         p.ataques.velocidad_proyectil
     ],
-    ("Ataques y distancias", "Distancia de aparición"): lambda p: [
+    ("Ataques y distancias", "Distancia de aparición y de espera"): lambda p: [
         p.ataques.distancia_aparicion_minima,
         p.ataques.distancia_aparicion_maxima,
     ],
     ("Ataques y distancias", "Distancia máxima"): lambda p: [p.ataques.distancia_maxima],
     ("Ataques y distancias", "Alcance de disparo enemigo"): lambda p: [p.ataques.alcance_disparo],
     ("Ataques y distancias", "Distancia mínima"): lambda p: [p.ataques.distancia_minima],
+    (
+        "Ataques y distancias",
+        "Distancia de pasada (más el radio de la zona de impacto del enemigo)",
+    ): lambda p: [p.ataques.distancia_pasada_minima, p.ataques.distancia_pasada_maxima],
+    ("Ataques y distancias", "Duración de la espera lejos de la estación"): lambda p: [
+        p.ataques.duracion_espera
+    ],
     ("Ataques y distancias", "Alcance del radar"): lambda p: [p.ataques.alcance_radar],
     (
         "Ataques y distancias",
-        "Distancia de llegada al destino "
-        "(a menos de esta distancia, el enemigo elige otro destino)",
+        "Distancia de llegada a un punto de la retirada "
+        "(a menos de esta distancia, sigue al siguiente o empieza a esperar)",
     ): lambda p: [p.ataques.distancia_llegada],
     ("Ataques y distancias", "Desestabilización: desvío máximo de la mira respecto al centro"): (
         lambda p: [p.ataques.desvio_maximo]

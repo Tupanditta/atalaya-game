@@ -37,12 +37,12 @@ def test_cu10_tipos_de_enemigo(parametros: Parametros) -> None:
     assert list(tarjetas) == list(TipoEnemigo)
     sin_efecto = _filas(tarjetas[TipoEnemigo.SIN_EFECTO])
     assert sin_efecto["Daño"] == "3"
-    assert sin_efecto["Recarga"] == "4 s"
+    assert sin_efecto["Recarga"] == "1 s"
     assert sin_efecto["Efecto"] == "ninguno"
     aturdidor = _filas(tarjetas[TipoEnemigo.ATURDIDOR])
     assert aturdidor["Efecto"] == "no puedes girar\nni disparar 1,5 s"
     assert aturdidor["Aparece desde"] == "oleada 10"
-    assert "1 s antes de disparar" in notas_enemigos(parametros)[0]
+    assert "0,3 s antes de disparar" in notas_enemigos(parametros)[0]
 
 
 def test_cu10_a1_vida_segun_el_nivel(parametros: Parametros) -> None:
@@ -53,7 +53,7 @@ def test_cu10_a1_vida_segun_el_nivel(parametros: Parametros) -> None:
     assert _filas(nivel_1[Tamano.PEQUENO])["Vida"] == "10"
     assert _filas(nivel_3[Tamano.PEQUENO])["Vida"] == "15"
     assert _filas(nivel_3[Tamano.GRANDE])["Vida"] == "60"
-    assert _filas(nivel_1[Tamano.GRANDE])["Velocidad"] == "40 u/s"
+    assert _filas(nivel_1[Tamano.GRANDE])["Velocidad"] == "320 u/s"
     # El de zona de impacto más pequeña es el más difícil de acertar.
     assert _filas(nivel_1[Tamano.PEQUENO])["Para acertar"] == "difícil"
     assert _filas(nivel_1[Tamano.GRANDE])["Para acertar"] == "fácil"

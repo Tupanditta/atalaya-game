@@ -19,6 +19,7 @@ Todos los valores de «Parámetros iniciales», agrupados como en `reglasNegocio
 ## Operaciones
 - **Cargar:** lee el archivo de parámetros y comprueba que están todos los valores, que tienen el tipo correcto y que respetan las relaciones entre ellos. Por ejemplo:
   - la distancia mínima es menor que el alcance de disparo,
+  - la distancia mínima es menor que la distancia de pasada, y esta, menor que el alcance de disparo,
   - el alcance de disparo es menor que la distancia máxima,
   - la distancia máxima es menor que el alcance del radar,
   - el tamaño mínimo de la mira es menor que el normal.

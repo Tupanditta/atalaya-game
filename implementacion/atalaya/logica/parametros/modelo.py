@@ -89,7 +89,14 @@ class Ataques:
     distancia_aparicion_maxima: float
     distancia_maxima: float
     alcance_disparo: float
+    #: Distancia mínima a la estación: ningún enemigo se acerca más (RN-31).
     distancia_minima: float
+    #: Distancia de pasada: a cuánto sobrepasa el enemigo la estación en su ataque,
+    #: sin contar el radio de su zona de impacto.
+    distancia_pasada_minima: float
+    distancia_pasada_maxima: float
+    #: Tiempo que el enemigo espera lejos entre la retirada y el siguiente ataque.
+    duracion_espera: float
     alcance_radar: float
     distancia_llegada: float
     #: Desvío máximo de la mira respecto al centro por desestabilización, en grados.
