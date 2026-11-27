@@ -106,6 +106,83 @@ def poligono(padre: NodePath, puntos: Sequence[Punto], relleno: Color) -> NodePa
     return camino
 
 
+def contorno_cinta(puntos: Sequence[Punto], ancho: float, cerrada: bool = False) -> list[Punto]:
+    """Bordes de una cinta de `ancho` píxeles a lo largo de `puntos`.
+
+    Devuelve los puntos alternos de un lado y del otro: (izquierda 0, derecha 0,
+    izquierda 1, derecha 1…). En cada vértice el desplazamiento sigue la media de las
+    normales de los dos tramos, para que la cinta no se abra ni se solape en las esquinas.
+    """
+    n = len(puntos)
+    if n < 2:
+        raise ValueError("Una cinta necesita al menos dos puntos")
+    mitad = ancho / 2
+    bordes: list[Punto] = []
+    for i, (x, y) in enumerate(puntos):
+        normales = []
+        for a, b in ((i - 1, i), (i, i + 1)):
+            if not cerrada and (a < 0 or b >= n):
+                continue
+            (ax, ay), (bx, by) = puntos[a % n], puntos[b % n]
+            largo = math.hypot(bx - ax, by - ay)
+            if largo > 0:
+                normales.append((-(by - ay) / largo, (bx - ax) / largo))
+        nx = sum(v[0] for v in normales)
+        ny = sum(v[1] for v in normales)
+        largo = math.hypot(nx, ny)
+        if largo == 0:
+            nx, ny, escala = 0.0, 0.0, 0.0
+        else:
+            nx, ny = nx / largo, ny / largo
+            # Inglete: se alarga en las esquinas, con límite para las muy cerradas.
+            coseno = max(0.5, max(nx * v[0] + ny * v[1] for v in normales))
+            escala = mitad / coseno
+        bordes.append((x + nx * escala, y + ny * escala))
+        bordes.append((x - nx * escala, y - ny * escala))
+    return bordes
+
+
+def cinta(
+    padre: NodePath,
+    puntos: Sequence[Punto],
+    ancho: float,
+    relleno: Color,
+    cerrada: bool = False,
+) -> NodePath:
+    """Trazo de `ancho` píxeles de diseño hecho con triángulos: se escala con el HUD y,
+    a diferencia de `linea`, admite anchos fraccionarios y transparencia sin solapes."""
+    bordes = contorno_cinta(puntos, ancho, cerrada)
+    if cerrada:
+        bordes += bordes[:2]
+    datos = GeomVertexData("cinta", GeomVertexFormat.get_v3(), Geom.UH_static)
+    vertices = GeomVertexWriter(datos, "vertex")
+    for x, y in bordes:
+        vertices.add_data3(x, 0, -y)
+    triangulos = GeomTriangles(Geom.UH_static)
+    for i in range(0, len(bordes) - 2, 2):
+        triangulos.add_vertices(i, i + 1, i + 2)
+        triangulos.add_vertices(i + 1, i + 3, i + 2)
+    geom = Geom(datos)
+    geom.add_primitive(triangulos)
+    nodo = GeomNode("cinta")
+    nodo.add_geom(geom)
+    camino = preparar(padre.attach_new_node(nodo))
+    camino.set_two_sided(True)
+    camino.set_color(*relleno)
+    return camino
+
+
+def arco(centro: Punto, radio: float, inicio: float, fin: float, lados: int = 24) -> list[Punto]:
+    """Puntos de un arco de `inicio` a `fin` grados, medidos en sentido horario desde
+    arriba, como en la pantalla (la y crece hacia abajo)."""
+    cx, cy = centro
+    resultado = []
+    for i in range(lados + 1):
+        angulo = math.radians(inicio + (fin - inicio) * i / lados)
+        resultado.append((cx + radio * math.sin(angulo), cy - radio * math.cos(angulo)))
+    return resultado
+
+
 def rectangulo(
     padre: NodePath, x: float, y: float, ancho: float, alto: float, relleno: Color
 ) -> NodePath:

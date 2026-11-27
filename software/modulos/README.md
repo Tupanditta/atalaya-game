@@ -77,7 +77,7 @@ Con la partida en pausa, los pasos 3 a 8 no se ejecutan.
 | PartidaAbandonada | — | flujo | enemigos, oleadas, entorno, escena, audio |
 | PausaCambiada | activa | flujo | escena, hud, audio |
 | ApuntadoCambiado | progreso (0 = mira normal, 1 = mira mínima) | armamento | vista, hud, audio |
-| DisparoRealizado | origen, dirección | armamento | enemigos, escena, audio |
+| DisparoRealizado | origen, dirección | armamento | enemigos, escena, hud, audio |
 | DisparoSinEnergia | — | armamento | hud, audio |
 | EnergiaCambiada | actual, máxima | armamento | hud |
 | EnemigoAparecido | id, tipo, tamaño | enemigos | escena, audio |

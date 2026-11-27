@@ -88,14 +88,22 @@ Las dos fuentes tienen licencia libre (SIL Open Font License) y se incluyen en `
 Ver `03-oleada.svg`, `04-apuntando.svg` y `05-aturdido.svg`.
 
 ### Mira (sigue al ratón)
-- Círculo de 2 px de grosor con cuatro marcas exteriores de 10 px y un punto central de 3 px.
+- **Forma:** anillo de cuatro arcos de 2 px, con una marca exterior de 10 px en cada hueco y un punto central de 5 px de diámetro. Con la mira normal, los arcos ocupan 56° cada uno, centrados en las diagonales, y las marcas quedan arriba, abajo, a la izquierda y a la derecha, a 7 px del anillo.
+- **Contorno:** cada trazo y el punto llevan debajo un contorno negro al 45 %, 2,5 px más ancho, para que se lean sobre las nebulosas brillantes.
+- **Al apuntar,** de forma continua y suavizada según el progreso de apuntado:
+  - toda la mira gira hasta 45°,
+  - los arcos se alargan hasta 74° y cierran los huecos,
+  - las marcas se acercan al anillo (a 3 px) y se acortan (a 7 px),
+  - aparece un brillo suave **acento** de 8 px bajo los trazos, hasta el 22 %.
+- **Mira al mínimo:** un rombo **acento** de 1,5 px y 7 px de semidiagonal rodea el punto central: el disparo está listo.
+- **Disparo:** un anillo **acento** sale de la mira, se aleja 22 px y se desvanece en 0,18 s.
 - Empieza centrada en (960, 540) y se mueve con el ratón por toda la pantalla; no sale de ella. Sustituye al cursor, que no se muestra.
 - **Radio en pantalla** = 540 × tan(radio de la mira) ÷ tan(campo de visión ÷ 2). Con los parámetros iniciales:
   - unos 34 px con la mira normal,
   - unos 21 px con la mira al mínimo y el zoom máximo.
 - **Color:** **texto** con la mira normal, que pasa de forma continua a **acento** según el progreso de apuntado.
 - **Desestabilización:** la mira se dibuja desplazada según el desvío de `vista`.
-- **Aturdimiento:** la mira se dibuja con trazo discontinuo y opacidad al 40 %.
+- **Aturdimiento:** la mira se dibuja como un círculo de trazo discontinuo (8 px de trazo y 6 px de hueco) con el punto central, sin marcas ni anillo de disparo, y opacidad al 40 %.
 
 ### Radar (abajo a la izquierda)
 - Círculo de 150 px de radio con centro en (210, 870). Fondo **fondo-panel** y borde **borde-panel**.

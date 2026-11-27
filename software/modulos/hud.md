@@ -31,7 +31,7 @@ Dibujar todo lo que va encima de la escena 3D: la mira, los indicadores, el rada
 - Publica: ninguno.
 - Escucha:
   - PausaCambiada,
-  - DisparoSinEnergia, EnergiaCambiada, IntegridadCambiada,
+  - DisparoRealizado (anillo de disparo de la mira), DisparoSinEnergia, EnergiaCambiada, IntegridadCambiada,
   - AturdimientoIniciado, AturdimientoTerminado,
   - DesestabilizacionIniciada, DesestabilizacionTerminada,
   - OleadaIniciada, DescansoIniciado, PuntosObtenidos, MejoraAplicada,

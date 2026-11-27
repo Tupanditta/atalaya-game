@@ -21,7 +21,7 @@ from atalaya.logica.flujo import Flujo, Pantalla
 from atalaya.logica.mejoras import Mejoras
 from atalaya.logica.nucleo.bus import Bus
 from atalaya.logica.nucleo.dominio import Tamano, TipoEnemigo
-from atalaya.logica.nucleo.eventos import DisparoSinEnergia, PartidaIniciada
+from atalaya.logica.nucleo.eventos import DisparoRealizado, DisparoSinEnergia, PartidaIniciada
 from atalaya.logica.oleadas import Oleadas
 from atalaya.logica.parametros import Parametros
 from atalaya.logica.radar import Altura, Contacto, Radar
@@ -36,7 +36,6 @@ from atalaya.presentacion.hud.dibujo import (
     circulo,
     color,
     linea,
-    mezclar,
     panel,
     poligono,
     rectangulo,
@@ -55,6 +54,7 @@ from atalaya.presentacion.hud.estilo import (
     color_integridad,
 )
 from atalaya.presentacion.hud.mejoras import PantallaMejoras
+from atalaya.presentacion.hud.mira import Mira
 
 #: Color de cada tipo de enemigo y de sus proyectiles (`interfaz.md`, sección 3).
 COLOR_TIPO: dict[TipoEnemigo, Color] = {
@@ -99,17 +99,6 @@ _AVISO_TEXTO = 1.0
 #: Constante de tiempo de la transición de las barras: llegan al valor en unos 150 ms.
 _TRANSICION = 0.05
 
-#: Mira: grosor, separación y largo de las marcas, y radio del punto central.
-_GROSOR_MIRA = 2
-_SEPARACION_MARCAS = 10
-_LARGO_MARCAS = 10
-_RADIO_PUNTO = 3
-_OPACIDAD_MIRA = 0.9
-#: Mira bloqueada por aturdimiento: trazo discontinuo y opacidad al 40 %.
-_OPACIDAD_MIRA_ATURDIDA = 0.4
-_TRAZO_DISCONTINUO = 8
-_HUECO_DISCONTINUO = 6
-
 #: Cartel de aturdimiento bajo el panel de oleada (`interfaz/05-aturdido.svg`).
 _CARTEL_X, _CARTEL_Y, _CARTEL_ANCHO, _CARTEL_ALTO = 700, 128, 520, 56
 #: Opacidad de la viñeta de aturdimiento en los bordes de la pantalla.
@@ -150,27 +139,6 @@ def texto_aturdimiento(restante: float) -> str:
     """
     decimas = max(1, math.ceil(restante * 10 - 1e-9))
     return f"SISTEMAS ATURDIDOS · {decimas // 10},{decimas % 10} s"
-
-
-def circulo_discontinuo(centro: Punto, radio: float) -> list[list[Punto]]:
-    """Trazos de una circunferencia discontinua: 8 px de trazo y 6 px de hueco."""
-    periodo = _TRAZO_DISCONTINUO + _HUECO_DISCONTINUO
-    trazos = max(1, round(2 * math.pi * radio / periodo))
-    fraccion = _TRAZO_DISCONTINUO / periodo
-    cx, cy = centro
-    resultado = []
-    for k in range(trazos):
-        inicio = 2 * math.pi * k / trazos
-        fin = inicio + 2 * math.pi * fraccion / trazos
-        puntos = [
-            (
-                cx + radio * math.cos(inicio + (fin - inicio) * i / 4),
-                cy + radio * math.sin(inicio + (fin - inicio) * i / 4),
-            )
-            for i in range(5)
-        ]
-        resultado.append(puntos)
-    return resultado
 
 
 class _Barra:
@@ -240,8 +208,7 @@ class Hud:
         self._centro = self._raiz.attach_new_node("centro")
         self._derecha = self._raiz.attach_new_node("derecha")
         self._tiempo = 0.0
-        self._mira: NodePath | None = None
-        self._clave_mira: tuple[float, Color, bool] | None = None
+        self._mira = Mira(self._centro)
         self._cartel: NodePath | None = None
         self._vineta = self._crear_vineta()
         self._sector: NodePath | None = None
@@ -256,6 +223,7 @@ class Hud:
         self._pantalla_mejoras = PantallaMejoras(
             self._raiz, self._fuente, mejoras, estacion, oleadas, flujo
         )
+        bus.suscribir(DisparoRealizado, self._al_disparar)
         bus.suscribir(DisparoSinEnergia, self._al_disparar_sin_energia)
         bus.suscribir(PartidaIniciada, self._al_iniciar_partida)
 
@@ -269,7 +237,7 @@ class Hud:
         descanso = pantalla is Pantalla.DESCANSO
         aturdido = self._estacion.aturdido and not derrota
         # En el descanso no se apunta: la mira solo se ve durante la oleada.
-        self._dibujar_mira(visible=not (derrota or descanso), aturdida=aturdido)
+        self._dibujar_mira(not (derrota or descanso), aturdido, dt)
         self._dibujar_radar()
         self._dibujar_estado(dt)
         self._dibujar_oleada()
@@ -292,7 +260,7 @@ class Hud:
         self._centro.set_x((self._ancho_diseno - ANCHO_DISENO) / 2)
         self._derecha.set_x(self._ancho_diseno - ANCHO_DISENO)
         self._crear_estaticos()
-        self._clave_mira = None
+        self._mira.olvidar()
         self._clave_sector = None
         self._energia.olvidar()
         self._integridad.olvidar()
@@ -362,48 +330,16 @@ class Hud:
 
     # --- mira ------------------------------------------------------------------------
 
-    def _dibujar_mira(self, visible: bool, aturdida: bool) -> None:
+    def _dibujar_mira(self, visible: bool, aturdida: bool, dt: float) -> None:
         j = self._jugador
         progreso = self._armamento.progreso_apuntado
         campo = j.campo_vision_normal + (j.campo_vision_zoom - j.campo_vision_normal) * progreso
         radio = radio_mira_en_pantalla(self._armamento.radio_mira, campo)
-        tono = mezclar(TEXTO, ACENTO, progreso)
-        clave = (round(radio, 2), tono, aturdida)
-        if clave != self._clave_mira or self._mira is None:
-            self._clave_mira = clave
-            if self._mira is not None:
-                self._mira.remove_node()
-            self._mira = capa(self._centro, "mira", _ORDEN_MIRA)
-            cx, cy = ANCHO_DISENO / 2, ALTO_DISENO / 2
-            e = self._escala
-            if aturdida:
-                # Mira bloqueada (`interfaz/05-aturdido.svg`): círculo discontinuo y punto,
-                # sin marcas exteriores, todo al 40 %.
-                trazo = (*tono[:3], _OPACIDAD_MIRA_ATURDIDA)
-                for trazo_circulo in circulo_discontinuo((cx, cy), radio):
-                    linea(self._mira, trazo_circulo, trazo, _GROSOR_MIRA, e)
-                poligono(self._mira, circulo((cx, cy), _RADIO_PUNTO, 16)[:-1], trazo)
-            else:
-                trazo = (*tono[:3], _OPACIDAD_MIRA)
-                linea(self._mira, circulo((cx, cy), radio), trazo, _GROSOR_MIRA, e)
-                dentro = radio + _SEPARACION_MARCAS
-                fuera = dentro + _LARGO_MARCAS
-                for dx, dy in ((0, -1), (0, 1), (-1, 0), (1, 0)):
-                    marca = [
-                        (cx + dx * dentro, cy + dy * dentro),
-                        (cx + dx * fuera, cy + dy * fuera),
-                    ]
-                    linea(self._mira, marca, trazo, _GROSOR_MIRA, e)
-                poligono(self._mira, circulo((cx, cy), _RADIO_PUNTO, 16)[:-1], tono)
         # La mira está donde la ha puesto el ratón: `puntero` va en medias alturas desde el
         # centro, con la y hacia arriba, y el HUD dibuja con la y de diseño hacia abajo.
         x, y = self._vista.puntero
         mitad = ALTO_DISENO / 2
-        self._mira.set_pos(x * mitad, 0, y * mitad)
-        if visible:
-            self._mira.show()
-        else:
-            self._mira.hide()
+        self._mira.dibujar(radio, progreso, aturdida, (x * mitad, y * mitad), visible, dt)
 
     # --- radar -----------------------------------------------------------------------
 
@@ -559,10 +495,14 @@ class Hud:
 
     # --- eventos ---------------------------------------------------------------------
 
+    def _al_disparar(self, evento: DisparoRealizado) -> None:
+        self._mira.disparo()
+
     def _al_disparar_sin_energia(self, evento: DisparoSinEnergia) -> None:
         self._desde_sin_energia = 0.0
 
     def _al_iniciar_partida(self, evento: PartidaIniciada) -> None:
+        self._mira.reiniciar()
         self._desde_sin_energia = math.inf
         self._energia.mostrada = None
         self._integridad.mostrada = None
