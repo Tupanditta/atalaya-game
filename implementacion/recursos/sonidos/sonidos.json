@@ -1,0 +1,14 @@
+{
+  "version": 1,
+  "sonidos": {
+    "disparo": {
+      "archivo": "177023__zimbot__blasteroutgoing6abox.wav",
+      "volumen": 0.5
+    },
+    "explosion": {
+      "archivo": "539968__za-games__deep-boom.wav",
+      "volumen": 1.0,
+      "ganancia": 5
+    }
+  }
+}

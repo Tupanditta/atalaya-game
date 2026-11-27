@@ -16,16 +16,16 @@ El jugador destruye al último enemigo de la oleada.
 1. El jugador destruye al último enemigo de la oleada (CU-04).
 2. El sistema da la oleada por superada y detiene el cronómetro de la oleada.
 3. El sistema calcula los puntos de mejora según el tiempo de la oleada y los suma a los puntos disponibles.
-4. El número de oleadas superadas es múltiplo de 5, y el sistema cambia el fondo espacial.
-5. El sistema empieza el descanso, cuya duración depende del nivel de dificultad, y abre la pantalla de mejoras (CU-11). En ella se presentan la transmisión de radio, el tiempo de la oleada, los puntos obtenidos y la cuenta atrás.
-6. Al terminar la cuenta atrás, o cuando el jugador elige continuar, el sistema cierra la pantalla de mejoras.
+4. El sistema empieza el descanso, cuya duración depende del nivel de dificultad, y abre la pantalla de mejoras (CU-11). En ella se presentan la transmisión de radio, el tiempo de la oleada, los puntos obtenidos y la cuenta atrás.
+5. Al terminar la cuenta atrás, o cuando el jugador elige continuar, el sistema cierra la pantalla de mejoras.
+6. El número de oleadas superadas es múltiplo de 10, y el sistema hace un salto hiperespacial de 4 s hasta el fondo espacial siguiente. Durante el salto no hay enemigos y la estación no dispara.
 7. El sistema inicia la siguiente oleada, con una dificultad mayor o igual que la anterior. Sus enemigos aparecen lejos de la estación, de uno en uno, sin superar el máximo de enemigos activos.
 
 ## Flujos alternativos y excepciones
-### A1. Sin cambio de fondo (desde el paso 4)
-1. El número de oleadas superadas no es múltiplo de 5.
-2. El sistema mantiene el fondo actual.
-3. Vuelve al paso 5.
+### A1. Sin cambio de fondo (desde el paso 6)
+1. El número de oleadas superadas no es múltiplo de 10.
+2. El sistema mantiene el fondo actual, sin salto.
+3. Vuelve al paso 7.
 
 ### A2. Oleada final (desde el paso 2)
 1. La oleada superada es la oleada 50.
@@ -57,7 +57,8 @@ El jugador destruye al último enemigo de la oleada.
 - Superar una oleada en un tiempo menor o igual que el de referencia da 3 puntos; en hasta el doble, 2 puntos; en más tiempo, 1 punto.
 - Ningún enemigo aparece cerca de la estación.
 - La nueva oleada no es más fácil que la anterior en número o tipo de enemigos.
-- El fondo cambia al superar las oleadas 5, 10, 15… y solo entonces.
+- El fondo cambia tras el descanso de las oleadas 10, 20, 30 y 40, con un salto de 4 s, y solo entonces. Una partida recorre los 5 fondos.
+- Durante el salto no hay enemigos activos y la estación no dispara.
 - Las oleadas 15, 18, 21… se juegan con niebla o destellos, alternando, y las demás no.
 - Superar la oleada 50 da la partida por ganada y ofrece subir el nivel de dificultad.
 - Tras ganar, el nivel desbloqueado se conserva al cerrar y volver a abrir el juego.

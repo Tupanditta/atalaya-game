@@ -4,10 +4,11 @@ Crea los módulos, les pasa sus dependencias y ejecuta el bucle del núcleo. Es 
 sitio donde se conocen todos los módulos (`modulos/README.md`).
 """
 
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 
 from atalaya.logica.armamento import Armamento
 from atalaya.logica.enemigos import Enemigos
+from atalaya.logica.entorno import EntornoEspacial
 from atalaya.logica.estacion import Estacion
 from atalaya.logica.flujo import Flujo
 from atalaya.logica.mejoras import Mejoras
@@ -17,6 +18,10 @@ from atalaya.logica.parametros import Parametros, cargar
 from atalaya.logica.radar import Radar
 from atalaya.logica.vista import Vista
 from atalaya.presentacion.entrada import Entrada, FuenteRaton, FuenteTeclado
+
+#: PROVISIONAL, solo para probar a mano los fondos y el salto: el fondo cambia en cada
+#: oleada, repitiéndose en orden. Quitar (o poner a False) antes de entregar.
+PRUEBA_FONDO_CADA_OLEADA = True
 
 
 @dataclass(frozen=True)
@@ -33,6 +38,7 @@ class Juego:
     estacion: Estacion
     mejoras: Mejoras
     radar: Radar
+    entorno: EntornoEspacial
 
 
 def montar(
@@ -50,6 +56,7 @@ def montar(
     oleadas = Oleadas(nucleo.bus, parametros, nucleo.azar)
     estacion = Estacion(nucleo.bus, parametros)
     mejoras = Mejoras(nucleo.bus, parametros)
+    entorno = EntornoEspacial(nucleo.bus, parametros)
     radar = Radar(parametros, vista, enemigos)
     flujo = Flujo(nucleo.bus, entrada, vista, armamento, mejoras, nucleo)
     nucleo.registrar(Etapa.ENTRADA, entrada)
@@ -59,8 +66,19 @@ def montar(
     nucleo.registrar(Etapa.ENEMIGOS, enemigos)
     nucleo.registrar(Etapa.OLEADAS, oleadas)
     nucleo.registrar(Etapa.ESTACION, estacion)
+    nucleo.registrar(Etapa.ENTORNO, entorno)
     return Juego(
-        nucleo, entrada, flujo, vista, armamento, enemigos, oleadas, estacion, mejoras, radar
+        nucleo,
+        entrada,
+        flujo,
+        vista,
+        armamento,
+        enemigos,
+        oleadas,
+        estacion,
+        mejoras,
+        radar,
+        entorno,
     )
 
 
@@ -76,9 +94,11 @@ def main() -> None:
     from atalaya.presentacion.hud import Hud
 
     parametros = cargar()
+    if PRUEBA_FONDO_CADA_OLEADA:
+        parametros = replace(parametros, oleadas=replace(parametros.oleadas, oleadas_por_fondo=1))
     base = crear_ventana()
     juego = montar(parametros, FuenteTecladoPanda(base), raton=FuenteRatonPanda(base))
-    escena = Escena(base, juego.nucleo.bus, juego.vista, juego.enemigos, parametros)
+    escena = Escena(base, juego.nucleo.bus, juego.vista, juego.enemigos, juego.entorno, parametros)
     hud = Hud(
         base,
         juego.nucleo.bus,
@@ -91,7 +111,15 @@ def main() -> None:
         juego.mejoras,
         juego.flujo,
     )
-    audio = Audio(base, juego.nucleo.bus, parametros, juego.flujo)
+    audio = Audio(
+        base,
+        juego.nucleo.bus,
+        parametros,
+        juego.flujo,
+        juego.vista,
+        juego.enemigos,
+        juego.oleadas,
+    )
     reloj = ClockObject.get_global_clock()
 
     def fotograma(tarea: Task.Task) -> int:
@@ -102,7 +130,7 @@ def main() -> None:
         # En pausa no avanza la orientación: se dibuja el último paso, sin interpolar.
         escena.dibujar(1.0 if nucleo.en_pausa else nucleo.fraccion_paso, reloj.get_dt())
         hud.dibujar(reloj.get_dt())
-        audio.actualizar()
+        audio.actualizar(reloj.get_dt())
         return Task.cont
 
     # El juego empieza en el menú principal (RF-34).

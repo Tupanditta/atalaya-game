@@ -26,18 +26,29 @@ from atalaya.logica.flujo import Flujo, Pantalla
 from atalaya.logica.mejoras import Mejoras
 from atalaya.logica.nucleo.bus import Bus
 from atalaya.logica.nucleo.dominio import Tamano, TipoEnemigo
-from atalaya.logica.nucleo.eventos import DisparoRealizado, DisparoSinEnergia, PartidaIniciada
+from atalaya.logica.nucleo.eventos import (
+    DisparoRealizado,
+    DisparoSinEnergia,
+    EnemigoAlcanzado,
+    EnemigoDestruido,
+    EstacionDanada,
+    OleadaIniciada,
+    PartidaIniciada,
+)
 from atalaya.logica.oleadas import Oleadas
 from atalaya.logica.parametros import Parametros
 from atalaya.logica.radar import Altura, Contacto, Radar
 from atalaya.logica.vista import Vista
-from atalaya.presentacion.escena.efectos import textura_vineta
+from atalaya.presentacion.escena.cielo import TEMAS
+from atalaya.presentacion.escena.efectos import DURACION_TURBULENCIA, textura_vineta, turbulencia
+from atalaya.presentacion.hud.cartel import CartelOleada
 from atalaya.presentacion.hud.dibujo import (
     Color,
     Punto,
     Texto,
     capa,
     cargar_fuente,
+    cinta,
     circulo,
     color,
     linea,
@@ -58,6 +69,7 @@ from atalaya.presentacion.hud.estilo import (
     color_integridad,
     forma_contacto,
 )
+from atalaya.presentacion.hud.holograma import Holograma
 from atalaya.presentacion.hud.manual import PantallaManual
 from atalaya.presentacion.hud.mejoras import PantallaMejoras
 from atalaya.presentacion.hud.menus import PantallaMenuPrincipal, PantallaPausa, PantallaResumen
@@ -82,6 +94,10 @@ _OLEADA_X, _OLEADA_Y, _OLEADA_ANCHO, _OLEADA_ALTO = 780, 32, 360, 80
 #: Radar, abajo a la izquierda.
 _RADAR_CENTRO: Punto = (210, 870)
 _RADAR_RADIO = 150
+#: Barrido del radar: vueltas por segundo y estela (grados, opacidad) de más a menos
+#: intensa, detrás de la línea del barrido.
+_VUELTAS_BARRIDO = 1 / 3
+_ESTELA_BARRIDO = ((10.0, 0.16), (24.0, 0.08), (45.0, 0.035))
 #: Diámetro del contacto según el tamaño del enemigo, en píxeles de diseño.
 _TAMANO_CONTACTO = {Tamano.PEQUENO: 8, Tamano.MEDIANO: 12, Tamano.GRANDE: 16}
 _OPACIDAD_FUERA = 0.7
@@ -129,6 +145,23 @@ def posicion_en_radar(contacto: Contacto) -> Punto:
     r = _RADAR_RADIO * contacto.distancia_relativa
     angulo = math.radians(contacto.angulo)
     return cx + r * math.sin(angulo), cy - r * math.cos(angulo)
+
+
+def textos_cartel(
+    parametros: Parametros, numero: int, fondo_anterior: int | None
+) -> tuple[str, str]:
+    """Título y subtítulo del cartel de la oleada `numero`.
+
+    Al llegar a un fondo nuevo, el subtítulo dice el sector y su nombre; si no, los
+    hostiles que vienen.
+    """
+    fondo = parametros.fondo_oleada(numero)
+    if fondo != fondo_anterior:
+        subtitulo = f"SECTOR {fondo} · {TEMAS[fondo - 1].nombre.upper()}"
+    else:
+        enemigos = parametros.composicion_oleada(numero).numero_enemigos
+        subtitulo = f"{enemigos} HOSTILES DETECTADOS"
+    return f"OLEADA {numero}", subtitulo
 
 
 def texto_aturdimiento(restante: float) -> str:
@@ -200,6 +233,8 @@ class Hud:
         self._oleadas = oleadas
         self._flujo = flujo
         self._fuente = cargar_fuente(base)
+        self._fuente_titulos = cargar_fuente(base, titulos=True)
+        self._holograma = Holograma(base.render2d)
         self._raiz = base.pixel2d.attach_new_node("hud")
         self._escala = 0.0
         self._ancho_diseno = float(ANCHO_DISENO)
@@ -208,6 +243,10 @@ class Hud:
         self._derecha = self._raiz.attach_new_node("derecha")
         self._tiempo = 0.0
         self._mira = Mira(self._centro)
+        self._cartel_oleada = CartelOleada(self._centro, self._fuente_titulos, self._fuente)
+        self._fondo_cartel: int | None = None
+        self._barrido: NodePath | None = None
+        self._turbulencia = 0.0
         self._cartel: NodePath | None = None
         self._vineta = self._crear_vineta()
         self._sector: NodePath | None = None
@@ -229,6 +268,10 @@ class Hud:
         bus.suscribir(DisparoRealizado, self._al_disparar)
         bus.suscribir(DisparoSinEnergia, self._al_disparar_sin_energia)
         bus.suscribir(PartidaIniciada, self._al_iniciar_partida)
+        bus.suscribir(OleadaIniciada, self._al_iniciar_oleada)
+        bus.suscribir(EstacionDanada, self._al_recibir_dano)
+        bus.suscribir(EnemigoAlcanzado, lambda evento: self._mira.marcar(False))
+        bus.suscribir(EnemigoDestruido, lambda evento: self._mira.marcar(True))
 
     def dibujar(self, dt: float) -> None:
         """Actualiza el HUD una vez por fotograma consultando el estado de la lógica."""
@@ -237,15 +280,19 @@ class Hud:
         self._desde_sin_energia += dt
         pantalla = self._flujo.pantalla
         oleada = pantalla is Pantalla.OLEADA_EN_CURSO
+        # Durante el salto hiperespacial no se apunta: la mira no se muestra (RN-20).
+        apuntando = oleada and not self._oleadas.en_salto
         self._mostrar_hud_partida(pantalla)
         # La mira y el aturdimiento solo se ven con la oleada en marcha: en el descanso no
         # se apunta, y en la pausa el apuntado queda cancelado.
-        self._dibujar_mira(oleada, oleada and self._estacion.aturdido, dt)
+        self._dibujar_mira(apuntando, apuntando and self._estacion.aturdido, dt)
         if pantalla in _CON_HUD:
             self._dibujar_radar()
             self._dibujar_estado(dt)
             self._dibujar_oleada()
         self._dibujar_aturdimiento(oleada and self._estacion.aturdido)
+        self._cartel_oleada.dibujar(dt, apuntando)
+        self._holograma.dibujar(dt, self._base.win.get_y_size())
         e, ancho = self._escala, self._ancho_diseno
         self._pantalla_mejoras.dibujar(pantalla is Pantalla.DESCANSO, e, ancho, dt)
         self._menu_principal.dibujar(pantalla is Pantalla.MENU_PRINCIPAL, e, ancho, dt)
@@ -305,6 +352,7 @@ class Hud:
             rectangulo(derecha, _BARRA_X, y, _BARRA_ANCHO, _BARRA_ALTO, PISTA)
         panel(centro, _OLEADA_X, _OLEADA_Y, _OLEADA_ANCHO, _OLEADA_ALTO, e)
         self._crear_fondo_radar(izquierda)
+        self._barrido = self._crear_barrido(izquierda)
         self._cartel = centro.attach_new_node("cartel-aturdimiento")
         atenuado = color("#0A1220", 0.85)
         aturdidor = COLOR_TIPO[TipoEnemigo.ATURDIDOR]
@@ -361,18 +409,55 @@ class Hud:
         # centro, con la y hacia arriba, y el HUD dibuja con la y de diseño hacia abajo.
         x, y = self._vista.puntero
         mitad = ALTO_DISENO / 2
-        self._mira.dibujar(radio, progreso, aturdida, (x * mitad, y * mitad), visible, dt)
+        dx, dy = self._temblor_mira(campo, dt)
+        posicion = (x * mitad + dx, y * mitad + dy)
+        self._mira.dibujar(radio, progreso, aturdida, posicion, visible, dt)
+
+    def _temblor_mira(self, campo_vision: float, dt: float) -> Punto:
+        """Desplazamiento de la mira por la turbulencia, en píxeles de diseño.
+
+        Tiembla con su propio ruido, del mismo tamaño angular que el de la cámara.
+        """
+        if self._turbulencia <= 0:
+            return (0.0, 0.0)
+        self._turbulencia = max(0.0, self._turbulencia - dt)
+        fuerza = self._turbulencia / DURACION_TURBULENCIA
+        rumbo, cabeceo = turbulencia(self._tiempo, fuerza, fase=3.7)
+        pixeles_por_grado = (ALTO_DISENO / 2) / math.tan(math.radians(campo_vision) / 2)
+        pixeles_por_grado *= math.pi / 180
+        return (rumbo * pixeles_por_grado, cabeceo * pixeles_por_grado)
 
     # --- radar -----------------------------------------------------------------------
 
     def _dibujar_radar(self) -> None:
         self._dibujar_sector(self._radar.sector_vision)
+        if self._barrido is not None:
+            self._barrido.set_r((self._tiempo * _VUELTAS_BARRIDO * 360) % 360)
         if self._contactos is not None:
             self._contactos.remove_node()
         self._contactos = capa(self._izquierda, "contactos", _ORDEN_CONTACTOS)
         apagado = (self._tiempo % _PARPADEO_AVISO) >= _PARPADEO_AVISO / 2
         for contacto in self._radar.contactos:
             self._dibujar_contacto(self._contactos, contacto, apagado)
+
+    def _crear_barrido(self, padre: NodePath) -> NodePath:
+        """Línea del barrido del radar con su estela; gira en `_dibujar_radar`."""
+        cx, cy = _RADAR_CENTRO
+        pivote = padre.attach_new_node("barrido")
+        pivote.set_pos(cx, 0, -cy)
+        anterior = 0.0
+        for hasta, opacidad in _ESTELA_BARRIDO:
+            arco = [
+                (
+                    _RADAR_RADIO * math.sin(math.radians(-a)),
+                    -_RADAR_RADIO * math.cos(math.radians(-a)),
+                )
+                for a in (anterior + (hasta - anterior) * i / 6 for i in range(7))
+            ]
+            poligono(pivote, [(0.0, 0.0), *arco], color("#2AD4FF", opacidad))
+            anterior = hasta
+        cinta(pivote, [(0.0, 0.0), (0.0, -_RADAR_RADIO)], 1.5, color("#2AD4FF", 0.45))
+        return pivote
 
     def _dibujar_sector(self, apertura: float) -> None:
         """Sector del campo de visión, abierto hacia arriba; se estrecha con el zoom."""
@@ -451,12 +536,24 @@ class Hud:
     # --- oleada ----------------------------------------------------------------------
 
     def _dibujar_oleada(self) -> None:
+        if self._oleadas.en_salto:
+            self._dibujar_salto()
+            return
         total = self._parametros.oleadas.numero_oleadas
         numero = max(1, self._oleadas.numero)
         self._textos["oleada"].mostrar(f"OLEADA {numero} / {total}", TEXTO)
         restantes = self._oleadas.restantes
         texto = "1 ENEMIGO RESTANTE" if restantes == 1 else f"{restantes} ENEMIGOS RESTANTES"
         self._textos["restantes"].mostrar(texto, TEXTO_SECUNDARIO)
+
+    def _dibujar_salto(self) -> None:
+        """Panel de oleada durante el salto: el rótulo parpadea y se ve el sector de destino."""
+        encendido = math.sin(self._tiempo * 2 * math.pi * 1.5) > -0.3
+        self._textos["oleada"].mostrar("SALTO HIPERESPACIAL", ACENTO if encendido else TEXTO)
+        siguiente = min(self._oleadas.numero + 1, self._parametros.oleadas.numero_oleadas)
+        sector = self._parametros.fondo_oleada(siguiente)
+        total = self._parametros.oleadas.fondos
+        self._textos["restantes"].mostrar(f"RUMBO AL SECTOR {sector} / {total}", TEXTO_SECUNDARIO)
 
     # --- aturdimiento -----------------------------------------------------------------
 
@@ -495,8 +592,19 @@ class Hud:
     def _al_disparar_sin_energia(self, evento: DisparoSinEnergia) -> None:
         self._desde_sin_energia = 0.0
 
+    def _al_recibir_dano(self, evento: EstacionDanada) -> None:
+        """La turbulencia del impacto también mueve la mira."""
+        self._turbulencia = DURACION_TURBULENCIA
+
+    def _al_iniciar_oleada(self, evento: OleadaIniciada) -> None:
+        titulo, subtitulo = textos_cartel(self._parametros, evento.numero, self._fondo_cartel)
+        self._fondo_cartel = self._parametros.fondo_oleada(evento.numero)
+        self._cartel_oleada.mostrar(titulo, subtitulo)
+
     def _al_iniciar_partida(self, evento: PartidaIniciada) -> None:
         self._mira.reiniciar()
+        self._fondo_cartel = None
+        self._cartel_oleada.ocultar()
         self._desde_sin_energia = math.inf
         self._energia.mostrada = None
         self._integridad.mostrada = None

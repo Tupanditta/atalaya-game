@@ -54,7 +54,8 @@ Saber en qué pantalla está el juego y decidir qué hace cada acción del jugad
 
 ## Eventos
 - Publica: PartidaIniciada, PartidaAbandonada, PausaCambiada, TerminarDescansoSolicitado.
-- Escucha: DescansoIniciado, DescansoTerminado, EstacionDestruida, PartidaGanada, OleadaSuperada.
+- Escucha: DescansoIniciado, DescansoTerminado, SaltoIniciado, SaltoTerminado, EstacionDestruida, PartidaGanada, OleadaSuperada.
+- Durante el salto hiperespacial (de SaltoIniciado a SaltoTerminado) entrega los ejes y la mira a `vista`, pero no la barra espaciadora a `armamento` (RN-20).
 
 ## Depende de
 nucleo (reloj y eventos), parametros, entrada, vista, armamento, mejoras, oleadas, progreso.

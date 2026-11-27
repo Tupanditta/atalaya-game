@@ -420,12 +420,12 @@ Cierra la fase 2.
 
 Cierra la fase 3.
 
-**Objetivo:** los 10 fondos, la niebla, los destellos y las transmisiones de radio.
+**Objetivo:** la niebla, los destellos y las transmisiones de radio. Los 5 fondos y el salto hiperespacial se adelantan a la mejora audiovisual (fases F0 y F1).
 
 **Alcance:**
 - Módulo `entorno`.
 - Módulo `historia` y archivo `datos/historia.json`, con textos provisionales.
-- `escena`: 10 fondos con fundido de 2 s, niebla aplicada a cada enemigo y proyectil, velo de los destellos.
+- `escena`: niebla aplicada a cada enemigo y proyectil, velo de los destellos. Los 5 fondos y el salto ya existen.
 - `hud`: transmisión de inicio (6 s) y transmisión en la pantalla de mejoras.
 - `audio`: sonido de radio y sonidos de los destellos.
 
@@ -435,7 +435,7 @@ Cierra la fase 3.
 
 | ID | Comprueba | Escenario | Resultado esperado |
 |---|---|---|---|
-| S8-T01 | RN-20, RF-17 | PartidaIniciada; OleadaSuperada de las oleadas 4, 5 y 45 | Fondo 1; sigue en 1; FondoCambiado (2); FondoCambiado (10). Una partida recorre los 10 fondos |
+| S8-T01 | RN-20, RF-17 | PartidaIniciada; fin del descanso de las oleadas 9, 10 y 40 | Fondo 1; sin salto; SaltoIniciado (2, 4 s) y, 4 s después, SaltoTerminado, FondoCambiado (2) y OleadaIniciada (11); SaltoIniciado (5). Una partida recorre los 5 fondos |
 | S8-T02 | RN-44, RF-45 | OleadaIniciada (15, niebla); OleadaSuperada (15) | EntornoCambiado (niebla); EntornoCambiado (ninguno) |
 | S8-T03 | Niebla | Visibilidad a 0, 250, 475, 700 y 1000 u | 1; 1; entre 0 y 1; 0; 0. No sube con la distancia y cambia menos de 0,01 entre distancias separadas 1 u |
 | S8-T04 | Sin entorno | Visibilidad sin niebla a cualquier distancia | 1 |
@@ -452,7 +452,7 @@ Cierra la fase 3.
 
 ### Comprobaciones manuales
 
-- **S8-M01:** el fondo cambia con un fundido de 2 s tras las oleadas 5, 10, 15…
+- **S8-M01:** tras el descanso de las oleadas 10, 20, 30 y 40 hay un salto hiperespacial de 4 s y aparece el fondo siguiente.
 - **S8-M02:** la niebla difumina enemigos y proyectiles según su distancia; el radar y los indicadores no cambian.
 - **S8-M03:** el destello tiene un resplandor previo de 1 s y deslumbra 1,5 s; el radar y los indicadores siguen legibles.
 - **S8-M04:** la transmisión de inicio desaparece a los 6 s; la del descanso se ve en la pantalla de mejoras con su sonido de radio.

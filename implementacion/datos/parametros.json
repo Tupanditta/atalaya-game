@@ -46,8 +46,9 @@
     "oleada_desestabilizadores": 5,
     "oleada_aturdidores": 10,
     "divisor_efecto": 3,
-    "fondos": 10,
-    "oleadas_por_fondo": 5
+    "fondos": 5,
+    "oleadas_por_fondo": 10,
+    "duracion_salto": 4
   },
   "entornos": {
     "primera_oleada": 15,

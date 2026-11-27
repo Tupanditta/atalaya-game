@@ -15,6 +15,7 @@ from atalaya.logica.flujo import MEJORA_DE_OPCION, Flujo, OpcionDescanso
 from atalaya.logica.mejoras import Mejoras, Motivo
 from atalaya.logica.nucleo.dominio import Mejora
 from atalaya.logica.oleadas import Oleadas
+from atalaya.presentacion.hud.componentes import parpadeo_encendido
 from atalaya.presentacion.hud.dibujo import (
     Color,
     Texto,
@@ -161,7 +162,7 @@ class PantallaMejoras:
         assert self._cuenta_atras is not None
         self._abierta += dt
         avance = min(1.0, self._abierta / _APARICION)
-        self._marco.set_alpha_scale(avance)
+        self._marco.set_alpha_scale(avance * parpadeo_encendido(self._abierta))
         self._marco.set_z(-_DESPLAZAMIENTO * (1 - avance))
         restante = self._oleadas.tiempo_descanso
         tono = AVISO if restante <= _CUENTA_ATRAS_AVISO else ACENTO

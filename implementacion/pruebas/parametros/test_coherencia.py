@@ -117,6 +117,9 @@ ESPERADO: dict[tuple[str, str], Esperado] = {
         p.oleadas.fondos,
         p.oleadas.oleadas_por_fondo,
     ],
+    ("Composición de las oleadas", "Duración del salto hiperespacial"): lambda p: [
+        p.oleadas.duracion_salto
+    ],
     # Entornos de baja visibilidad
     ("Entornos de baja visibilidad", "Oleadas con entorno"): lambda p: [
         p.entornos.primera_oleada,

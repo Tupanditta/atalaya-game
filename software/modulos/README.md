@@ -84,8 +84,8 @@ Con la partida en pausa, los pasos 3 a 8 no se ejecutan.
 | AvisoDisparo | id del enemigo | enemigos | escena, audio |
 | ProyectilLanzado | id, tipo de enemigo | enemigos | escena, audio |
 | ProyectilImpacta | tipo de enemigo | enemigos | estacion |
-| EnemigoAlcanzado | id, vida restante | enemigos | escena, audio |
-| EnemigoDestruido | id, posición | enemigos | oleadas, escena, audio |
+| EnemigoAlcanzado | id, vida restante | enemigos | escena, hud, audio |
+| EnemigoDestruido | id, posición | enemigos | oleadas, escena, hud, audio |
 | EstacionDanada | cantidad, integridad, máxima | estacion | escena, hud, audio |
 | IntegridadCambiada | actual, máxima | estacion | mejoras, hud |
 | DesestabilizacionIniciada / DesestabilizacionTerminada | duración | estacion | vista, escena, hud |
@@ -96,6 +96,7 @@ Con la partida en pausa, los pasos 3 a 8 no se ejecutan.
 | OleadaSuperada | número, tiempo, enemigos | oleadas | mejoras, entorno, historia, flujo, audio |
 | DescansoIniciado | duración, siguiente oleada | oleadas | flujo, mejoras, hud |
 | DescansoTerminado | — | oleadas | flujo, mejoras |
+| SaltoIniciado / SaltoTerminado | fondo de destino, duración | oleadas | entorno, flujo, escena, hud, audio |
 | TerminarDescansoSolicitado | — | flujo | oleadas |
 | PartidaGanada | nivel | oleadas | flujo, progreso, historia, audio |
 | PuntosObtenidos | obtenidos, disponibles, tiempo, tiempo de referencia | mejoras | hud |

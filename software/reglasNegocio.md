@@ -245,7 +245,7 @@ Reglas del juego que el sistema debe respetar, independientes de la tecnología.
 - **Estado:** Confirmado
 
 ### RN-20. Cambio de fondo
-- **Regla:** El fondo espacial cambia cada 5 oleadas superadas.
+- **Regla:** El fondo espacial cambia cada 10 oleadas superadas. El cambio se hace al terminar el descanso, con un salto hiperespacial antes de la oleada siguiente. Durante el salto no hay enemigos y la estación no puede disparar.
 - **Prioridad:** Media
 - **Origen:** Usuario
 - **Estado:** Confirmado
@@ -393,7 +393,8 @@ n es el número de la oleada (de 1 a 50).
 | Desestabilizadores | desde la oleada 5 | RN-16 |
 | Aturdidores | desde la oleada 10 | RN-16 |
 | Enemigos con efecto especial | como máximo un tercio de la oleada | RN-16 |
-| Fondos distintos | 10, uno por cada tramo de 5 oleadas | RN-20 |
+| Fondos distintos | 5, uno por cada tramo de 10 oleadas | RN-20 |
+| Duración del salto hiperespacial | 4 s | RN-20 |
 
 ### Entornos de baja visibilidad
 

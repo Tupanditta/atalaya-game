@@ -27,7 +27,8 @@ Mantener hacia dónde mira el jugador y cuánto zoom tiene, y calcular la direcc
   - campo de visión,
   - posición de la mira en la pantalla,
   - dirección de la mira: la del punto de la escena bajo la mira, según la perspectiva y el campo de visión actuales, más el desvío,
-  - ejes de la cámara (adelante, arriba, derecha).
+  - ejes de la cámara (adelante, arriba, derecha),
+  - giro aplicado en el último paso: los ejes horizontal y vertical (−1, 0 o +1); (0, 0) sin giro o aturdido. `audio` lo usa para los sonidos del giro.
 
 ## Eventos
 - Publica: ninguno.

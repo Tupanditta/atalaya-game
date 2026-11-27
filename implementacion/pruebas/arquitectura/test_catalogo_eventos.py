@@ -40,6 +40,8 @@ DATOS: dict[str, dict[str, object]] = {
     "OleadaSuperada": {"numero": int, "tiempo": float, "enemigos": int},
     "DescansoIniciado": {"duracion": float, "siguiente_oleada": int},
     "DescansoTerminado": {},
+    "SaltoIniciado": {"fondo": int, "duracion": float},
+    "SaltoTerminado": {},
     "TerminarDescansoSolicitado": {},
     "PartidaGanada": {"nivel": int},
     "PuntosObtenidos": {
@@ -81,7 +83,7 @@ def _clases() -> dict[str, type[Evento]]:
 def test_s0_t21_una_clase_por_evento() -> None:
     """S0-T21: existe una clase por evento del catálogo y ninguna más."""
     catalogo = _catalogo()
-    assert len(catalogo) == 36
+    assert len(catalogo) == 38
     assert set(_clases()) == catalogo
     assert set(DATOS) == catalogo
 

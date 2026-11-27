@@ -155,6 +155,18 @@ _RELACIONES: list[tuple[str, Callable[[Parametros], bool]]] = [
         "entornos.intervalo_oleadas > 0",
         lambda p: p.entornos.intervalo_oleadas > 0,
     ),
+    (
+        "oleadas.oleadas_por_fondo > 0",
+        lambda p: p.oleadas.oleadas_por_fondo > 0,
+    ),
+    (
+        "oleadas.fondos × oleadas.oleadas_por_fondo = oleadas.numero_oleadas",
+        lambda p: p.oleadas.fondos * p.oleadas.oleadas_por_fondo == p.oleadas.numero_oleadas,
+    ),
+    (
+        "oleadas.duracion_salto > 0",
+        lambda p: p.oleadas.duracion_salto > 0,
+    ),
 ]
 
 

@@ -6,6 +6,9 @@ cierran sus huecos y las marcas se acercan; con la mira al mínimo aparece un ro
 alrededor del punto. Al disparar, un anillo se expande y se desvanece desde la mira.
 Un contorno oscuro bajo cada trazo la hace legible sobre nebulosas brillantes.
 
+Al acertar a un enemigo aparece un instante un aspa blanca alrededor de la mira; al
+destruirlo, un aspa roja mayor que se abre y se desvanece.
+
 Aturdida, la mira queda bloqueada: círculo discontinuo y punto, al 40 %, sin marcas.
 """
 
@@ -24,7 +27,7 @@ from atalaya.presentacion.hud.dibujo import (
     mezclar,
     poligono,
 )
-from atalaya.presentacion.hud.estilo import ACENTO, ALTO_DISENO, ANCHO_DISENO, TEXTO
+from atalaya.presentacion.hud.estilo import ACENTO, ALTO_DISENO, ANCHO_DISENO, PELIGRO, TEXTO
 
 #: Orden de dibujo de las capas de la mira: sombra, brillo y trazo, de abajo a arriba.
 ORDEN_SOMBRA = 6
@@ -120,6 +123,14 @@ def _con_opacidad(tono: Color, opacidad: float) -> Color:
     return (tono[0], tono[1], tono[2], tono[3] * opacidad)
 
 
+#: Marcas de acierto: duración en segundos, distancia a la mira, largo y grosor de cada
+#: brazo del aspa, para un impacto y para un enemigo destruido.
+DURACION_MARCA = (0.18, 0.45)
+SEPARACION_MARCA = (6.0, 9.0)
+LARGO_MARCA = (9.0, 15.0)
+GROSOR_MARCA = (2.0, 3.0)
+
+
 class Mira:
     """Dibuja la mira y el anillo de disparo, y los mueve a donde marca el ratón."""
 
@@ -131,6 +142,9 @@ class Mira:
         self._desde_disparo = math.inf
         self._radio = 0.0
         self._tono = TEXTO
+        self._marca: NodePath | None = None
+        self._desde_marca = math.inf
+        self._marca_baja = False
 
     def olvidar(self) -> None:
         """Obliga a reconstruirla, por ejemplo tras cambiar la escala."""
@@ -143,6 +157,30 @@ class Mira:
     def reiniciar(self) -> None:
         """Sin anillo de disparo pendiente, por ejemplo al empezar una partida."""
         self._desde_disparo = math.inf
+        self._desde_marca = math.inf
+
+    def marcar(self, baja: bool) -> None:
+        """Marca de acierto: un impacto o, con `baja`, un enemigo destruido.
+
+        Una baja no se tapa con el impacto del mismo disparo.
+        """
+        if not baja and self._marca_baja and self._desde_marca < DURACION_MARCA[1]:
+            return
+        self._marca_baja = baja
+        self._desde_marca = 0.0
+        if self._marca is not None:
+            self._marca.remove_node()
+        i = int(baja)
+        self._marca = capa(self._raiz, "marca", ORDEN_TRAZO)
+        self._marca.set_pos(CENTRO[0], 0, -CENTRO[1])
+        tono = PELIGRO if baja else TEXTO
+        dentro = self._radio + SEPARACION_MARCA[i]
+        fuera = dentro + LARGO_MARCA[i]
+        for angulo in (45, 135, 225, 315):
+            c, s = math.cos(math.radians(angulo)), math.sin(math.radians(angulo))
+            brazo = [(c * dentro, s * dentro), (c * fuera, s * fuera)]
+            cinta(self._marca, brazo, GROSOR_MARCA[i] + 2.5, SOMBRA)
+            cinta(self._marca, brazo, GROSOR_MARCA[i], tono)
 
     def dibujar(
         self,
@@ -173,6 +211,7 @@ class Mira:
             else:
                 self._dibujar_normal(self._forma, progreso)
         self._dibujar_pulso(aturdida)
+        self._dibujar_marca(dt)
 
     # --- formas ----------------------------------------------------------------------
 
@@ -205,6 +244,19 @@ class Mira:
             cinta(sombra, puntos, GROSOR_SOMBRA, oscuro)
             cinta(trazo, puntos, GROSOR, tono)
         poligono(trazo, circulo(CENTRO, RADIO_PUNTO, 16)[:-1], tono)
+
+    def _dibujar_marca(self, dt: float) -> None:
+        """La marca de acierto se abre un poco y se desvanece."""
+        if self._marca is None:
+            return
+        self._desde_marca += dt
+        t = self._desde_marca / DURACION_MARCA[int(self._marca_baja)]
+        if t >= 1:
+            self._marca.remove_node()
+            self._marca = None
+            return
+        self._marca.set_scale(1 + (0.25 if self._marca_baja else 0.1) * t)
+        self._marca.set_alpha_scale(1 - t**2)
 
     def _dibujar_pulso(self, aturdida: bool) -> None:
         """Anillo que se aleja de la mira y se desvanece tras cada disparo."""

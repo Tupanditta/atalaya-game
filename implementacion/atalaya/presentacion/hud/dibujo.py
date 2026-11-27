@@ -22,6 +22,8 @@ from panda3d.core import (
     NodePath,
     TextFont,
     TextNode,
+    TextProperties,
+    TextPropertiesManager,
     TransparencyAttrib,
 )
 
@@ -31,12 +33,32 @@ Punto = tuple[float, float]
 #: Orden de dibujo de los paneles: debajo de todo lo demás del HUD (`capa`).
 ORDEN_PANEL = 0
 
+_CARPETA_FUENTES = Path(__file__).resolve().parents[3] / "recursos" / "fuentes"
+
 #: Fuentes candidatas, por orden de preferencia. Rajdhani es la de `interfaz.md`; si no
 #: está en `recursos/fuentes/`, se usa la alternativa de las maquetas.
 _FUENTES = [
-    Path(__file__).resolve().parents[3] / "recursos" / "fuentes" / "Rajdhani-SemiBold.ttf",
+    _CARPETA_FUENTES / "Rajdhani-SemiBold.ttf",
     Path("C:/Windows/Fonts/seguisb.ttf"),
     Path("C:/Windows/Fonts/segoeui.ttf"),
+]
+
+#: Fuentes para los símbolos que Rajdhani no tiene (las flechas de las ayudas de teclas).
+_FUENTES_SIMBOLOS = [
+    Path("C:/Windows/Fonts/seguisym.ttf"),
+    Path("C:/Windows/Fonts/segoeui.ttf"),
+]
+#: Símbolos que se escriben con la fuente de símbolos.
+_SIMBOLOS = frozenset("↑↓←→")
+#: Nombre de las propiedades de texto de los símbolos en el motor.
+_PROPIEDADES_SIMBOLOS = "simbolos"
+_fuente_simbolos: list[TextFont] = []
+
+#: Fuentes de los títulos grandes: Rajdhani Bold (`interfaz.md`, «Tipografía»).
+_FUENTES_TITULOS = [
+    _CARPETA_FUENTES / "Rajdhani-Bold.ttf",
+    Path("C:/Windows/Fonts/segoeuib.ttf"),
+    *_FUENTES,
 ]
 
 
@@ -56,9 +78,17 @@ def mezclar(a: Color, b: Color, t: float) -> Color:
     )
 
 
-def cargar_fuente(base: ShowBase) -> TextFont | None:
-    """Primera fuente disponible de la lista, o `None` para usar la del motor."""
-    for ruta in _FUENTES:
+def cargar_fuente(base: ShowBase, titulos: bool = False) -> TextFont | None:
+    """Primera fuente disponible de la lista, o `None` para usar la del motor.
+
+    Con `titulos`, la de los títulos grandes.
+    """
+    _registrar_simbolos(base)
+    return _primera(base, _FUENTES_TITULOS if titulos else _FUENTES)
+
+
+def _primera(base: ShowBase, rutas: Sequence[Path]) -> TextFont | None:
+    for ruta in rutas:
         if ruta.is_file():
             ruta_motor = Filename.from_os_specific(str(ruta)).get_fullpath()
             fuente: TextFont = base.loader.load_font(ruta_motor)
@@ -66,6 +96,44 @@ def cargar_fuente(base: ShowBase) -> TextFont | None:
                 fuente.set_pixels_per_unit(64)
                 return fuente
     return None
+
+
+def _registrar_simbolos(base: ShowBase) -> None:
+    """Da de alta en el motor la fuente de los símbolos, una sola vez."""
+    if _fuente_simbolos:
+        return
+    fuente = _primera(base, _FUENTES_SIMBOLOS)
+    if fuente is None:
+        return
+    _fuente_simbolos.append(fuente)
+    propiedades = TextProperties()
+    propiedades.set_font(fuente)
+    TextPropertiesManager.get_global_ptr().set_properties(_PROPIEDADES_SIMBOLOS, propiedades)
+
+
+def _tramos(texto: str) -> list[tuple[str, bool]]:
+    """Trozos seguidos de texto normal o de símbolos, con si son símbolos."""
+    tramos: list[tuple[str, bool]] = []
+    for caracter in texto:
+        simbolo = caracter in _SIMBOLOS
+        if tramos and tramos[-1][1] == simbolo:
+            tramos[-1] = (tramos[-1][0] + caracter, simbolo)
+        else:
+            tramos.append((caracter, simbolo))
+    return tramos
+
+
+def con_simbolos(texto: str) -> str:
+    """`texto` con los símbolos marcados para escribirse con la fuente de símbolos.
+
+    El motor cambia de propiedades de texto entre `\x01nombre\x01` y `\x02`.
+    """
+    if not _fuente_simbolos or not any(c in _SIMBOLOS for c in texto):
+        return texto
+    return "".join(
+        f"\x01{_PROPIEDADES_SIMBOLOS}\x01{trozo}\x02" if simbolo else trozo
+        for trozo, simbolo in _tramos(texto)
+    )
 
 
 def capa(padre: NodePath, nombre: str, orden: int) -> NodePath:
@@ -250,9 +318,16 @@ def panel(
 def ancho_texto(fuente: TextFont | None, texto: str, tamano: float) -> float:
     """Ancho en píxeles de diseño de `texto` escrito con `fuente` a `tamano` píxeles."""
     nodo = TextNode("medida")
+    simbolos = TextNode("medida-simbolos")
     if fuente is not None:
         nodo.set_font(fuente)
-    return float(nodo.calc_width(texto)) * tamano
+    if _fuente_simbolos:
+        simbolos.set_font(_fuente_simbolos[0])
+    ancho = 0.0
+    for trozo, simbolo in _tramos(texto):
+        medidor = simbolos if simbolo and _fuente_simbolos else nodo
+        ancho += float(medidor.calc_width(trozo))
+    return ancho * tamano
 
 
 class Texto:
@@ -277,12 +352,13 @@ class Texto:
         # La línea base del texto queda en la y indicada, como en las maquetas SVG.
         self._camino.set_pos(x, 0, -y)
         self._camino.set_scale(tamano)
+        self._tamano = tamano
         self._texto: str | None = None
         self._color: Color | None = None
 
     def mostrar(self, texto: str, color_texto: Color) -> None:
         if texto != self._texto:
-            self._nodo.set_text(texto)
+            self._nodo.set_text(con_simbolos(texto))
             self._texto = texto
         if color_texto != self._color:
             self._nodo.set_text_color(*color_texto)
@@ -290,3 +366,7 @@ class Texto:
 
     def ocultar(self) -> None:
         self.mostrar("", self._color or (1.0, 1.0, 1.0, 1.0))
+
+    def escalar(self, factor: float) -> None:
+        """Agranda o reduce el texto respecto a su tamaño, para animarlo."""
+        self._camino.set_scale(self._tamano * factor)

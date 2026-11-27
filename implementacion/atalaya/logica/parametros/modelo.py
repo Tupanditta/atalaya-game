@@ -115,6 +115,8 @@ class Oleadas:
     divisor_efecto: int
     fondos: int
     oleadas_por_fondo: int
+    #: Duración del salto hiperespacial entre dos fondos, en segundos (RN-20).
+    duracion_salto: float
 
 
 @dataclass(frozen=True, slots=True)
@@ -232,6 +234,22 @@ class Parametros:
             return Entorno.NINGUNO
         orden = desde_primera // e.intervalo_oleadas
         return Entorno.NIEBLA if orden % 2 == 0 else Entorno.DESTELLOS
+
+    def fondo_oleada(self, numero: int) -> int:
+        """Fondo espacial de la oleada `numero`: uno por cada tramo de oleadas (RN-20).
+
+        Si hay más tramos que fondos, los fondos se repiten en orden.
+        """
+        self._comprobar_oleada(numero)
+        o = self.oleadas
+        return (numero - 1) // o.oleadas_por_fondo % o.fondos + 1
+
+    def hay_salto_tras(self, numero: int) -> bool:
+        """Indica si tras el descanso de la oleada `numero` hay salto a otro fondo (RN-20)."""
+        self._comprobar_oleada(numero)
+        if numero == self.oleadas.numero_oleadas:
+            return False
+        return self.fondo_oleada(numero + 1) != self.fondo_oleada(numero)
 
     def _comprobar_oleada(self, numero: int) -> None:
         if not 1 <= numero <= self.oleadas.numero_oleadas:

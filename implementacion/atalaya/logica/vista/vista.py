@@ -62,6 +62,7 @@ class Vista:
         self._puntero = (0.0, 0.0)
         self._puntero_recibido = (0.0, 0.0)
         self._aturdido = False
+        self._giro = (0, 0)
         self._desestabilizado = False
         self._desvio = (0.0, 0.0)
         self._tiempo_ruido = 0.0
@@ -108,6 +109,7 @@ class Vista:
         if self._aturdido:
             self._horizontal = 0
             self._vertical = 0
+        self._giro = (self._horizontal, self._vertical)
         self._puntero = self._puntero_recibido
         j = self._jugador
         self._campo_vision = (
@@ -196,6 +198,14 @@ class Vista:
         Su módulo nunca supera el desvío máximo; vale (0, 0) sin desestabilización.
         """
         return self._desvio
+
+    @property
+    def giro(self) -> tuple[int, int]:
+        """Ejes de giro aplicados en el último paso, cada uno −1, 0 o +1; (0, 0) sin giro.
+
+        Aturdido, la vista no gira y el giro es (0, 0).
+        """
+        return self._giro
 
     @property
     def aturdido(self) -> bool:

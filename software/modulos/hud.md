@@ -11,8 +11,11 @@ Dibujar todo lo que va encima de la escena 3D: la mira, los indicadores, el rada
 - **Radar:** contactos de `radar` con su símbolo, color, tamaño y marca de altura, y el sector del campo de visión.
 - **Energía:** barra con la energía actual y máxima. Parpadea al recibir DisparoSinEnergia.
 - **Integridad:** barra con la integridad actual y máxima, y el nivel de dificultad al lado.
-- **Oleada:** número de oleada y enemigos restantes.
+- **Oleada:** número de oleada y enemigos restantes. Durante el salto hiperespacial, el rótulo del salto y el sector de destino, sin mira.
 - **Aturdimiento:** un aviso visible mientras dura (RF-15).
+- **Cartel de oleada:** al recibir OleadaIniciada, el número de la oleada y el sector (al llegar a un fondo nuevo) o los hostiles que vienen.
+- **Marcas de acierto:** al recibir EnemigoAlcanzado y EnemigoDestruido, un aspa breve alrededor de la mira.
+- **Barrido del radar** y **capa holográfica** de líneas de barrido y franja de luz, según `interfaz.md`.
 - El radar y los indicadores no cambian de tamaño con el zoom y no se ven afectados por la niebla ni por los destellos.
 
 ## Pantallas
@@ -32,6 +35,7 @@ Dibujar todo lo que va encima de la escena 3D: la mira, los indicadores, el rada
 - Escucha:
   - PausaCambiada,
   - DisparoRealizado (anillo de disparo de la mira), DisparoSinEnergia, EnergiaCambiada, IntegridadCambiada,
+  - EnemigoAlcanzado, EnemigoDestruido (marcas de acierto), EstacionDanada (turbulencia de la mira),
   - AturdimientoIniciado, AturdimientoTerminado,
   - DesestabilizacionIniciada, DesestabilizacionTerminada,
   - OleadaIniciada, DescansoIniciado, PuntosObtenidos, MejoraAplicada,

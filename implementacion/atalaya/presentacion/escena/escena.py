@@ -1,12 +1,16 @@
 """Ventana y escena 3D (`modulos/escena.md`).
 
-Versión de S6: ventana a pantalla completa, cámara orientada según `vista`, fondo 1,
-enemigos con el modelo y el color de su tipo y la escala de su tamaño, su destello de
-aviso, proyectiles, rayo del disparo, destello de impacto, explosión básica, daño
-recibido (temblor y tinte rojo) y temblor continuo por desestabilización. Con la partida
-en pausa, la escena queda congelada y oscurecida; sin partida en curso (menú principal y
-resumen), el fondo gira muy despacio. Los entornos y los cambios de fondo llegan en
-sprints posteriores.
+Versión de S6: ventana a pantalla completa, cámara orientada según `vista`, el fondo
+actual de `entorno` entre los cinco cielos generados (RN-20), enemigos con el modelo y
+el color de su tipo y la escala de su tamaño, el brillo de su motor y su destello de
+aviso, proyectiles, disparo bláster desde dos cañones alternos, destello y chispas en
+el impacto, explosión con onda expansiva y sacudida de la cámara, daño recibido
+(temblor y tinte rojo) y temblor continuo por desestabilización. Entre dos fondos, la
+animación del salto hiperespacial (`salto.py`). Cada fondo tiene su paisaje de
+planetas, asteroides y polvo (`paisaje.py`), y el sol de ese fondo ilumina también a los
+enemigos. Con la partida en pausa, la escena
+queda congelada y oscurecida; sin partida en curso (menú principal y resumen), el fondo
+gira muy despacio. Los entornos de baja visibilidad llegan en un sprint posterior.
 """
 
 import math
@@ -16,8 +20,10 @@ from panda3d.core import (
     AmbientLight,
     CardMaker,
     DirectionalLight,
+    GraphicsStateGuardianBase,
     NodePath,
     Quat,
+    Texture,
     TransparencyAttrib,
     Vec3,
     WindowProperties,
@@ -25,32 +31,43 @@ from panda3d.core import (
 )
 
 from atalaya.logica.enemigos import Enemigos, FaseAtaque, distancia_impacto
+from atalaya.logica.entorno import EntornoEspacial
 from atalaya.logica.nucleo.bus import Bus, Evento
-from atalaya.logica.nucleo.dominio import Tamano, Vector3
+from atalaya.logica.nucleo.dominio import Tamano, TipoEnemigo, Vector3
 from atalaya.logica.nucleo.eventos import (
+    DescansoIniciado,
     DisparoRealizado,
     EnemigoAlcanzado,
     EnemigoDestruido,
     EstacionDanada,
     EstacionDestruida,
+    FondoCambiado,
     PartidaAbandonada,
     PartidaIniciada,
     PausaCambiada,
+    SaltoIniciado,
 )
 from atalaya.logica.parametros import Parametros
 from atalaya.logica.vista import Vista, interpolar
 from atalaya.presentacion.escena.efectos import (
+    Calentamiento,
+    Chispas,
     DanoRecibido,
     Destello,
     Efecto,
     Explosion,
     Proyectil,
     Rayo,
+    Sacudida,
     brillo,
+    textura_anillo,
     textura_brillo,
 )
-from atalaya.presentacion.escena.fondo import cubo_de_cielo, textura_fondo
+from atalaya.presentacion.escena.fondo import Fondos, cubo_de_cielo
 from atalaya.presentacion.escena.modelos import COLOR_TIPO, modelo_enemigo
+from atalaya.presentacion.escena.paisaje import Paisaje
+from atalaya.presentacion.escena.planetas import PAISAJES
+from atalaya.presentacion.escena.salto import SaltoHiperespacial
 
 #: Resolución si el sistema no informa de la de la pantalla (`design.md`, sección 6).
 ANCHO = 1920
@@ -58,12 +75,23 @@ ALTO = 1080
 
 #: Distancia del plano cercano de la cámara.
 _PLANO_CERCANO = 0.5
-#: Distancia del plano lejano: más allá del alcance del radar.
-_PLANO_LEJANO = 5000.0
+#: Distancia del plano lejano: más allá del alcance del radar y de los planetas del
+#: paisaje, con sus anillos.
+_PLANO_LEJANO = 9000.0
 
-#: Salida del rayo respecto a la cámara (derecha, delante, arriba). Si saliera del centro
-#: de la cámara se vería como un punto; así se ve como una línea hacia el impacto.
+#: Salida del disparo respecto a la cámara (derecha, delante, arriba). Si saliera del
+#: centro de la cámara se vería como un punto; así se ve como una línea hacia el impacto.
+#: Hay dos cañones, a izquierda y derecha, que disparan por turnos.
 _SALIDA_RAYO: Vector3 = (0.35, 1.0, -0.45)
+
+#: Brillo del motor de los enemigos: posición detrás del cuerpo y tamaño, en radios.
+_POSICION_MOTOR = -0.8
+_TAMANO_MOTOR = 0.55
+
+#: Sacudida de la cámara por una explosión: grados por cada unidad de radio del enemigo
+#: dividida por su distancia, y máximo.
+_SACUDIDA_POR_RADIO = 6.0
+_SACUDIDA_MAXIMA = 0.5
 
 #: Eventos de la simulación que se convierten en efectos o limpian la escena.
 _EVENTOS = (
@@ -129,6 +157,7 @@ class Escena:
         bus: Bus,
         vista: Vista,
         enemigos: Enemigos,
+        entorno: EntornoEspacial,
         parametros: Parametros,
     ) -> None:
         self._base = base
@@ -136,14 +165,27 @@ class Escena:
         self._enemigos = enemigos
         self._parametros = parametros
         base.camLens.set_near_far(_PLANO_CERCANO, _PLANO_LEJANO)
-        self._fondo = cubo_de_cielo(textura_fondo(1))
-        self._fondo.reparent_to(base.render)
+        self._entorno = entorno
+        self._fondos = Fondos()
+        # Espacio: el cielo y el paisaje del fondo, que el salto apaga y cambia juntos.
+        self._espacio = base.render.attach_new_node("espacio")
+        self._fondo = cubo_de_cielo(self._fondos.textura(entorno.fondo))
+        self._fondo.reparent_to(self._espacio)
         self._mundo = base.render.attach_new_node("mundo")
-        self._iluminar()
+        self._sol = self._iluminar()
         self._brillo = textura_brillo()
+        self._anillo = textura_anillo()
+        self._paisaje = Paisaje(self._espacio, self._brillo)
+        self._poner_fondo(entorno.fondo)
+        self._salto = SaltoHiperespacial(base.camera, base.render2d, self._espacio, self._brillo)
         self._modelos: dict[int, NodePath] = {}
         self._avisos: dict[int, NodePath] = {}
+        self._motores: dict[int, NodePath] = {}
         self._tamanos: dict[int, Tamano] = {}
+        self._tipos: dict[int, TipoEnemigo] = {}
+        self._canon = 1.0
+        self._sacudida = Sacudida()
+        self._tiempo = 0.0
         self._proyectiles: dict[int, Proyectil] = {}
         self._dano = DanoRecibido(base.render2d)
         self._efectos: list[Efecto] = []
@@ -154,9 +196,19 @@ class Escena:
         self._en_partida = False
         self._rumbo_menu = 0.0
         self._cabeceo_menu = 0.0
+        # Texturas y geometría de los efectos y del salto, ya en la tarjeta gráfica: la
+        # primera explosión o el primer salto no dan un tirón.
+        self._preparar(self._brillo, self._anillo)
+        gsg = self._gsg()
+        if gsg is not None:
+            self._salto.preparar(gsg)
+        self._calentar()
         for tipo in _EVENTOS:
             bus.suscribir(tipo, self._anotar)
         bus.suscribir(PausaCambiada, self._al_cambiar_pausa)
+        bus.suscribir(DescansoIniciado, self._al_iniciar_descanso)
+        bus.suscribir(SaltoIniciado, self._al_iniciar_salto)
+        bus.suscribir(FondoCambiado, self._al_cambiar_fondo)
         bus.suscribir(PartidaIniciada, self._al_iniciar_partida)
         bus.suscribir(PartidaAbandonada, self._al_terminar_partida)
         bus.suscribir(EstacionDestruida, self._al_terminar_partida)
@@ -174,6 +226,7 @@ class Escena:
         self._mostrar_velo(dt)
         # En pausa todo queda congelado: los efectos no avanzan.
         dt_escena = 0.0 if self._en_pausa else dt
+        self._tiempo += dt_escena
         v = self._vista
         if self._en_partida:
             q = interpolar(v.orientacion_anterior, v.orientacion, fraccion)
@@ -184,10 +237,13 @@ class Escena:
         else:
             self._rumbo_menu = (self._rumbo_menu - _GIRO_MENU * dt) % 360
             self._base.camera.set_hpr(self._rumbo_menu, self._cabeceo_menu, 0)
-        self._ajustar_lente(v.campo_vision)
         # Los efectos nuevos aparecen en este mismo fotograma (RNF-05).
         self._procesar_eventos()
+        self._paisaje.avanzar(dt_escena)
+        self._salto.avanzar(dt_escena, self._base.camera)
+        self._ajustar_lente(v.campo_vision + self._salto.apertura)
         self._dano.avanzar(dt_escena, self._base.camera)
+        self._sacudida.avanzar(dt_escena, self._base.camera)
         self._colocar_enemigos(fraccion)
         self._colocar_proyectiles(fraccion)
         self._efectos = [e for e in self._efectos if e.avanzar(dt_escena)]
@@ -229,9 +285,62 @@ class Escena:
         self._rumbo_menu = self._base.camera.get_h()
         self._cabeceo_menu = self._base.camera.get_p()
 
+    # --- fondo -----------------------------------------------------------------------
+
+    def _gsg(self) -> GraphicsStateGuardianBase | None:
+        return self._base.win.get_gsg() if self._base.win is not None else None
+
+    def _preparar(self, *texturas: Texture) -> None:
+        """Sube las texturas a la tarjeta gráfica antes de que se usen."""
+        gsg = self._gsg()
+        if gsg is not None:
+            for textura in texturas:
+                textura.prepare(gsg.get_prepared_objects())
+
+    def _preparar_fondo(self, indice: int) -> None:
+        """Crea el cielo y el paisaje del fondo `indice` y los sube a la tarjeta gráfica."""
+        self._preparar(self._fondos.textura(indice))
+        self._paisaje.preparar(indice, self._fondos.texturas_planetas(indice), self._gsg())
+
+    def _poner_fondo(self, indice: int) -> None:
+        """Muestra el cielo y el paisaje del fondo `indice`, con la luz de su sol."""
+        self._fondo.set_texture(self._fondos.textura(indice), 1)
+        self._paisaje.mostrar(indice, self._fondos.texturas_planetas(indice))
+        paisaje = PAISAJES[indice - 1]
+        # Los enemigos se iluminan desde el mismo sol que los planetas.
+        self._sol.node().set_color((*(0.9 * c for c in paisaje.luz_color), 1.0))
+        self._sol.look_at(-Vec3(*paisaje.luz_direccion))
+
+    def _al_iniciar_descanso(self, evento: DescansoIniciado) -> None:
+        """Si tras este descanso hay salto, prepara ya el cielo y el paisaje de destino.
+
+        Crearlos y subirlos a la tarjeta gráfica cuesta algún fotograma; así pasa tras la
+        pantalla de mejoras y no en mitad del salto.
+        """
+        anterior = evento.siguiente_oleada - 1
+        if 1 <= anterior <= self._parametros.oleadas.numero_oleadas and (
+            self._parametros.hay_salto_tras(anterior)
+        ):
+            self._preparar_fondo(self._parametros.fondo_oleada(evento.siguiente_oleada))
+
+    def _al_iniciar_salto(self, evento: SaltoIniciado) -> None:
+        """Empieza la animación del salto; el fondo se cambia a mitad del túnel, sin verse."""
+        self._preparar_fondo(evento.fondo)
+        self._salto.iniciar(evento.duracion, lambda: self._poner_fondo(evento.fondo))
+
+    def _al_cambiar_fondo(self, evento: FondoCambiado) -> None:
+        self._poner_fondo(evento.indice)
+
+    def _cancelar_salto(self) -> None:
+        """Un salto interrumpido deja el fondo en que sigue la partida."""
+        if self._salto.activo:
+            self._salto.cancelar()
+            self._poner_fondo(self._entorno.fondo)
+
     # --- enemigos --------------------------------------------------------------------
 
-    def _iluminar(self) -> None:
+    def _iluminar(self) -> NodePath:
+        """Luz ambiente y sol de los enemigos; el sol se orienta según el fondo."""
         ambiente = AmbientLight("ambiente")
         ambiente.set_color((0.35, 0.38, 0.45, 1))
         sol = DirectionalLight("sol")
@@ -240,6 +349,7 @@ class Escena:
         nodo_sol.set_hpr(30, -40, 0)
         self._mundo.set_light(self._mundo.attach_new_node(ambiente))
         self._mundo.set_light(nodo_sol)
+        return nodo_sol
 
     def _colocar_enemigos(self, fraccion: float) -> None:
         """Crea, mueve y borra los modelos para que coincidan con los enemigos activos."""
@@ -247,7 +357,9 @@ class Escena:
         for id in [i for i in self._modelos if i not in activos]:
             self._modelos.pop(id).remove_node()
             self._avisos.pop(id, None)
+            self._motores.pop(id, None)
             self._tamanos.pop(id, None)
+            self._tipos.pop(id, None)
         for id, enemigo in activos.items():
             modelo = self._modelos.get(id)
             if modelo is None:
@@ -255,7 +367,14 @@ class Escena:
                 modelo.reparent_to(self._mundo)
                 self._modelos[id] = modelo
                 self._avisos[id] = brillo(modelo, self._brillo, COLOR_TIPO[enemigo.tipo])
+                motor = brillo(modelo, self._brillo, COLOR_TIPO[enemigo.tipo])
+                motor.set_pos(0, _POSICION_MOTOR, 0)
+                self._motores[id] = motor
                 self._tamanos[id] = enemigo.tamano
+                self._tipos[id] = enemigo.tipo
+            # El motor parpadea un poco, cada enemigo a su ritmo.
+            parpadeo = 0.85 + 0.15 * math.sin(self._tiempo * 37.0 + id * 1.7)
+            self._motores[id].set_scale(_TAMANO_MOTOR * parpadeo)
             a, b = Vec3(*enemigo.posicion_anterior), Vec3(*enemigo.posicion)
             posicion = a + (b - a) * fraccion
             modelo.set_pos(posicion)
@@ -313,13 +432,10 @@ class Escena:
                     impacto = self._punto_impacto(disparo, enemigo.posicion, enemigo.tamano)
             elif isinstance(evento, EnemigoDestruido):
                 tamano = self._tamanos.get(evento.id, Tamano.MEDIANO)
+                tipo = self._tipos.get(evento.id, TipoEnemigo.SIN_EFECTO)
                 if disparo is not None:
                     impacto = self._punto_impacto(disparo, evento.posicion, tamano)
-                self._efectos.append(
-                    Explosion(
-                        self._mundo, self._brillo, Vec3(*evento.posicion), self._radio(tamano)
-                    )
-                )
+                self._explotar(Vec3(*evento.posicion), self._radio(tamano), tipo)
             elif isinstance(evento, EstacionDanada):
                 self._dano.recibir()
             else:
@@ -344,21 +460,54 @@ class Escena:
     ) -> None:
         if disparo is None:
             return
-        salida = Vec3(*self._vista.orientacion.rotar(_SALIDA_RAYO))
+        derecha, delante, arriba = _SALIDA_RAYO
+        self._canon = -self._canon
+        salida = Vec3(*self._vista.orientacion.rotar((derecha * self._canon, delante, arriba)))
         if impacto is None:
-            # Sin impacto, el rayo se pierde a la distancia máxima de los enemigos.
+            # Sin impacto, el disparo se pierde a la distancia máxima de los enemigos.
             fin = Vec3(*disparo.direccion) * self._parametros.ataques.distancia_maxima
-        else:
-            fin, radio = impacto
-            self._efectos.append(Destello(self._mundo, self._brillo, fin, radio * 0.8))
-        self._efectos.append(Rayo(self._mundo, salida, fin))
+            self._efectos.append(Rayo(self._mundo, self._brillo, salida, fin))
+            return
+        fin, radio = impacto
+        rayo = Rayo(self._mundo, self._brillo, salida, fin)
+        self._efectos.append(rayo)
+        # El destello y las chispas esperan a que llegue el disparo.
+        retraso = rayo.duracion_vuelo
+        self._efectos.append(Destello(self._mundo, self._brillo, fin, radio * 0.8, retraso))
+        self._efectos.append(Chispas(self._mundo, self._brillo, fin, radio, retraso=retraso))
+
+    def _calentar(self) -> None:
+        """Dibuja una vez cada efecto, lejos y diminuto, para que el primero real no tarde."""
+        lejos = Vec3(0, _PLANO_LEJANO * 0.8, 0)
+        proyectil = Proyectil(self._mundo, self._brillo, COLOR_TIPO[TipoEnemigo.SIN_EFECTO])
+        proyectil.colocar(lejos, Vec3(0, -1, 0))
+        motor = brillo(self._mundo, self._brillo, COLOR_TIPO[TipoEnemigo.SIN_EFECTO])
+        motor.set_pos(lejos)
+        efectos: list[Efecto] = [
+            Explosion(self._mundo, self._brillo, self._anillo, lejos, 0.01),
+            Chispas(self._mundo, self._brillo, lejos, 0.01),
+            Rayo(self._mundo, self._brillo, lejos, lejos + Vec3(0, 1, 0)),
+            Destello(self._mundo, self._brillo, lejos, 0.01),
+        ]
+        self._efectos.append(Calentamiento(efectos, [proyectil.nodo, motor]))
+
+    def _explotar(self, punto: Vec3, radio: float, tipo: TipoEnemigo) -> None:
+        """Explosión del color del tipo y sacudida de la cámara según tamaño y distancia."""
+        self._efectos.append(
+            Explosion(self._mundo, self._brillo, self._anillo, punto, radio, COLOR_TIPO[tipo])
+        )
+        distancia = max(punto.length(), 1.0)
+        self._sacudida.sacudir(min(_SACUDIDA_MAXIMA, _SACUDIDA_POR_RADIO * radio / distancia))
 
     def _limpiar(self) -> None:
+        self._cancelar_salto()
         for modelo in self._modelos.values():
             modelo.remove_node()
         self._modelos.clear()
         self._avisos.clear()
+        self._motores.clear()
         self._tamanos.clear()
+        self._tipos.clear()
         for proyectil in self._proyectiles.values():
             proyectil.quitar()
         self._proyectiles.clear()

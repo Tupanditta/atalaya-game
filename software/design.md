@@ -17,6 +17,7 @@ Este documento fija los lenguajes, herramientas, métodos y protocolos con los q
 | Gráficos 3D, ventana y teclado | **Panda3D 1.10** | Motor 3D maduro y pensado para Python. Funciona con gráficos integrados (RNF-01). Trae cuaterniones, niebla, partículas, interfaz 2D y un medidor de rendimiento. |
 | Sonido posicional y música | Audio de Panda3D con OpenAL | Sonido 3D respecto al oyente (RF-10) sin bibliotecas extra. |
 | Carpeta de datos de usuario | **platformdirs** | Da la carpeta correcta de cada sistema, `%APPDATA%` en Windows, para `progreso.json`. |
+| Cálculo de texturas y sonidos | **numpy** | Genera por código los fondos y los sonidos con operaciones vectorizadas, sin recorrer píxeles ni muestras en Python. |
 | Lectura de datos | `json` y `dataclasses` de la biblioteca estándar | Sin dependencias adicionales para parámetros, historia y progreso. |
 
 Alternativas descartadas:
@@ -62,23 +63,27 @@ Las versiones exactas se fijan en `implementacion/requirements.txt` (y `requirem
 ## 6. Gráficos
 
 - **Modelos (RES-03):** geometría sencilla de pocos polígonos, con un color de emisión por tipo de enemigo. Se generan por código a partir de primitivas o se cargan en formato glTF. Si se usa glTF, se añade el complemento `panda3d-gltf`.
-- **Fondos:** un cubo de cielo (seis imágenes) por cada uno de los 10 fondos, con fundido entre fondos.
+- **Fondos:** un cubo de cielo (seis imágenes) por cada uno de los 5 fondos, generado por código con **numpy** (estrellas, nebulosas y polvo galáctico) y guardado en la caché de usuario para que los arranques siguientes sean inmediatos. El fondo 1 se prepara al arrancar; los demás se generan en un proceso aparte para no restar fluidez.
+- **Paisaje de cada fondo:** planetas y lunas (esferas con texturas generadas con numpy y guardadas en la misma caché), anillos, cinturones de asteroides de pocos polígonos y polvo cercano. Los asteroides lejanos se unen en pocas geometrías para dibujarlos de una vez. El paisaje del fondo de destino se construye y se sube a la tarjeta gráfica en el descanso previo al salto. El paso de un fondo al siguiente es un salto hiperespacial animado.
 - **Niebla:**
   - El color de enemigos y proyectiles se mezcla con el del fondo según la visibilidad que calcula `entorno` para su distancia.
   - Se aplica objeto a objeto, para que el radar y la interfaz no se vean afectados.
 - **Destellos:** un velo blanco a pantalla completa con transparencia animada.
 - **Efectos:**
-  - Rayo: línea luminosa que se desvanece en 0,1 s.
-  - Explosiones: el sistema de partículas de Panda3D.
+  - Disparo: haz bláster que vuela del cañón al impacto en 0,1 s como mucho.
+  - Explosiones y chispas: partículas propias. Las chispas de cada efecto son una sola geometría de puntos con textura, así que cuestan un único dibujo.
+  - Salto hiperespacial: estelas cuyos vértices se escriben con numpy en cada fotograma y un túnel con textura que se desplaza.
+  - Las texturas y estados de los efectos se suben a la tarjeta gráfica en el menú, para que el primer uso no dé tirones.
   - Temblor: desplazamiento de la cámara con ruido suave.
 - **Resolución:** pantalla completa con la resolución nativa de la pantalla; 1920 × 1080 si el sistema no la informa. El campo de visión vertical es fijo y el horizontal se calcula con la proporción de la pantalla, para que la imagen no se deforme. La interfaz se escala según la altura de la ventana.
 - **Medición:** el medidor PStats de Panda3D se usa para comprobar RNF-01 en el equipo de referencia.
 
 ## 7. Sonido
 
-- **Formato:** OGG Vorbis para efectos y música.
-- **Sonidos posicionales:** se colocan en la posición de cada enemigo y proyectil. El oyente se coloca en la cámara en cada fotograma.
-- **Música:** tres pistas (calma, combate y crítica) con fundidos de 2 s, según `modulos/audio.md`.
+- **Origen y formato:** los sonidos se generan por código con numpy (recursos propios) y se guardan como WAV mono de 16 bits a 44,1 kHz en la caché de usuario. Desde el segundo arranque se cargan al momento. Cualquiera se puede sustituir por un archivo WAV u OGG de `implementacion/recursos/sonidos/`, indicado en `sonidos.json`, con su autor y licencia en `CREDITOS.md`.
+- **Sonidos posicionales:** se colocan en la posición de cada enemigo (motor, aviso de disparo, disparos y explosión). El oyente se coloca en la cámara en cada fotograma.
+- **Registro:** todos los sonidos son graves; las pruebas comprueban que el centro de su espectro queda por debajo de 2 kHz.
+- **Sonido de fondo:** sin música. El fondo de la oleada es la suma de los motores de las naves, más graves y fuertes cuanto más cerca, sobre un zumbido provisional de la estación, según `modulos/audio.md`. Los bucles son periódicos de forma exacta y no tienen saltos al repetirse.
 
 ## 8. Datos
 
@@ -142,7 +147,7 @@ Se construye por fases. Cada fase termina con un juego ejecutable y sus pruebas 
    - 50 oleadas y victoria,
    - niveles de dificultad y progreso guardado,
    - historia,
-   - 10 fondos,
+   - 5 fondos y salto hiperespacial,
    - niebla y destellos.
 4. **Acabado:**
    - sonido posicional completo y música,
@@ -168,4 +173,4 @@ Se construye por fases. Cada fase termina con un juego ejecutable y sus pruebas 
 
 - Solo se usan recursos propios o con licencia CC0 o compatible, por ejemplo de Kenney, OpenGameArt o Freesound filtrando por CC0.
 - Cada recurso externo se anota en `implementacion/recursos/CREDITOS.md` con su autor, origen y licencia.
-- Las dependencias de código deben tener licencia libre compatible con la distribución: Panda3D usa BSD modificada y platformdirs usa MIT.
+- Las dependencias de código deben tener licencia libre compatible con la distribución: Panda3D usa BSD modificada, platformdirs usa MIT y numpy usa BSD.

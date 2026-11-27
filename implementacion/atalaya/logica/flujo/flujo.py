@@ -7,6 +7,8 @@ barra espaciadora a `armamento`. Esc pausa la partida durante la oleada o el des
 del juego (CU-12), con confirmación. Tras la derrota se muestra el resumen con «Volver a
 jugar» y «Menú principal». La selección de nivel y la victoria llegan en S7: hasta
 entonces solo existe el nivel 1 y «Jugar» empieza la partida directamente (CU-01, A1).
+Durante el salto hiperespacial entre dos fondos (RN-20) la vista gira, pero la barra
+espaciadora no apunta ni dispara.
 """
 
 from collections.abc import Mapping
@@ -25,6 +27,8 @@ from atalaya.logica.nucleo.eventos import (
     PartidaAbandonada,
     PartidaIniciada,
     PausaCambiada,
+    SaltoIniciado,
+    SaltoTerminado,
     TerminarDescansoSolicitado,
 )
 from atalaya.logica.vista import Vista, eje_de_flechas
@@ -197,9 +201,12 @@ class Flujo:
         self._seleccion = dict.fromkeys(_OPCIONES, 0)
         self._continuar_pedido = False
         self._sonidos = dict.fromkeys(SonidoMenu, 0)
+        self._en_salto = False
         bus.suscribir(EstacionDestruida, self._al_destruir_estacion)
         bus.suscribir(DescansoIniciado, self._al_iniciar_descanso)
         bus.suscribir(DescansoTerminado, self._al_terminar_descanso)
+        bus.suscribir(SaltoIniciado, self._al_iniciar_salto)
+        bus.suscribir(SaltoTerminado, self._al_terminar_salto)
 
     # --- consultas -------------------------------------------------------------------
 
@@ -313,6 +320,7 @@ class Flujo:
         """Empieza una partida en `nivel` y pasa a la oleada en curso."""
         self._nivel = nivel
         self._oleadas_superadas = 0
+        self._en_salto = False
         self._pantalla = Pantalla.OLEADA_EN_CURSO
         self._bus.publicar(PartidaIniciada(nivel))
 
@@ -350,7 +358,8 @@ class Flujo:
             eje_de_flechas(a.mantenida(Accion.ABAJO), a.mantenida(Accion.ARRIBA)),
         )
         self._vista.recibir_puntero(*a.puntero())
-        self._armamento.recibir_disparo(a.mantenida(Accion.DISPARO))
+        # Durante el salto no se dispara: no hay enemigos y la estación está en tránsito.
+        self._armamento.recibir_disparo(not self._en_salto and a.mantenida(Accion.DISPARO))
 
     def _actualizar_descanso(self) -> None:
         """Pantalla de mejoras: las flechas mueven la selección e Intro la elige (CU-11).
@@ -570,6 +579,14 @@ class Flujo:
         self._continuar_pedido = False
         # La barra pulsada al acabar la oleada no apunta ni dispara durante el descanso.
         self._soltar_disparo()
+
+    def _al_iniciar_salto(self, evento: SaltoIniciado) -> None:
+        """Empieza el salto: la barra pulsada no apunta ni dispara hasta llegar (RN-20)."""
+        self._en_salto = True
+        self._soltar_disparo()
+
+    def _al_terminar_salto(self, evento: SaltoTerminado) -> None:
+        self._en_salto = False
 
     def _al_terminar_descanso(self, evento: DescansoTerminado) -> None:
         """Se cierra la pantalla de mejoras y sigue la oleada (CU-11, A5 y A6)."""

@@ -7,7 +7,7 @@ name = "atalaya"
 version = "0.1.0"
 description = "Prototipo del juego de defensa de la estación Atalaya"
 requires-python = ">=3.11,<3.12"
-dependencies = ["panda3d", "platformdirs"]
+dependencies = ["panda3d", "platformdirs", "numpy"]
 
 [project.scripts]
 atalaya = "atalaya.arranque:main"

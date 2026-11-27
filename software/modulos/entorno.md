@@ -7,7 +7,7 @@
 Decidir qué fondo espacial se ve y si la oleada tiene niebla o destellos, y calcular cuánto se ve cada cosa en cada momento.
 
 ## Estado que gestiona
-- El índice del fondo actual, de 1 a 10.
+- El índice del fondo actual, de 1 a 5, y el de destino durante el salto hiperespacial.
 - El entorno de la oleada actual: ninguno, niebla o destellos.
 - En los destellos, la fase actual (calma, aviso o deslumbramiento) y el tiempo restante de esa fase.
 
@@ -20,7 +20,7 @@ Decidir qué fondo espacial se ve y si la oleada tiene niebla o destellos, y cal
   - **intensidad del deslumbramiento** (de 0 a 1, según la fase del destello).
 
 ## Reglas que aplica
-- Al recibir OleadaSuperada, si el número de la oleada es múltiplo de 5, pasa al fondo siguiente y publica FondoCambiado (RN-20).
+- Al recibir SaltoIniciado, guarda el fondo de destino. Al recibir SaltoTerminado, pasa a ese fondo y publica FondoCambiado (RN-20).
 - Al recibir OleadaIniciada, activa el entorno indicado y publica EntornoCambiado. Al recibir OleadaSuperada, lo desactiva.
 - En la niebla, la visibilidad es 1 hasta la distancia de visibilidad completa, baja de forma continua y es 0 desde la distancia de invisibilidad.
 
@@ -28,8 +28,9 @@ Decidir qué fondo espacial se ve y si la oleada tiene niebla o destellos, y cal
 - Publica: FondoCambiado, EntornoCambiado, DestelloAviso, DestelloInicio, DestelloFin.
 - Escucha:
   - OleadaIniciada, OleadaSuperada,
+  - SaltoIniciado, SaltoTerminado,
   - PartidaIniciada, que pone el fondo 1 y quita el entorno,
-  - PartidaAbandonada y EstacionDestruida, que quitan el entorno.
+  - PartidaAbandonada y EstacionDestruida, que quitan el entorno y cancelan el salto en curso sin cambiar el fondo.
 
 ## Depende de
 nucleo (azar), parametros.

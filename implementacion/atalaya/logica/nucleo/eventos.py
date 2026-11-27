@@ -174,6 +174,18 @@ class DescansoTerminado(Evento):
 
 
 @dataclass(frozen=True, slots=True)
+class SaltoIniciado(Evento):
+    #: Fondo al que lleva el salto, de 1 a 5.
+    fondo: int
+    duracion: float
+
+
+@dataclass(frozen=True, slots=True)
+class SaltoTerminado(Evento):
+    pass
+
+
+@dataclass(frozen=True, slots=True)
 class PartidaGanada(Evento):
     nivel: int
 
@@ -205,7 +217,7 @@ class MejoraAplicada(Evento):
 
 @dataclass(frozen=True, slots=True)
 class FondoCambiado(Evento):
-    #: Índice del fondo, de 1 a 10.
+    #: Índice del fondo, de 1 a 5.
     indice: int
 
 

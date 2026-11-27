@@ -306,3 +306,14 @@ def test_mira_se_aplica_al_actualizar(parametros: Parametros) -> None:
     assert vista.puntero == (0.0, 0.0)
     vista.actualizar(PASO)
     assert vista.puntero == (0.0, 0.0)
+
+
+def test_giro_aplicado_en_el_ultimo_paso(parametros: Parametros) -> None:
+    """`giro` dice los ejes que se aplicaron en el último paso; sin ejes, (0, 0)."""
+    vista, _ = _vista(parametros)
+    assert vista.giro == (0, 0)
+    vista.recibir_ejes(1, -1)
+    vista.actualizar(PASO)
+    assert vista.giro == (1, -1)
+    vista.actualizar(PASO)
+    assert vista.giro == (0, 0)

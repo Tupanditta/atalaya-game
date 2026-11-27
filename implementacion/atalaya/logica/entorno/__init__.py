@@ -1,4 +1,8 @@
-"""Módulo entorno: Fondo espacial y entornos de baja visibilidad.
+"""Módulo entorno: fondo espacial y, en un sprint posterior, entornos de baja visibilidad.
 
-Se implementa en un sprint posterior (`software/sprints.md`).
+Ver `software/modulos/entorno.md`.
 """
+
+from atalaya.logica.entorno.entorno import FONDO_INICIAL, EntornoEspacial
+
+__all__ = ["FONDO_INICIAL", "EntornoEspacial"]

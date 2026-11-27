@@ -145,6 +145,19 @@ def ayudas(
         x += ancho_tecla + 10 + ancho_accion
 
 
+#: Encendido de una pantalla: tramos (hasta el segundo indicado, opacidad) de su parpadeo,
+#: como un holograma que arranca.
+_PARPADEO = ((0.04, 0.55), (0.07, 0.12), (0.12, 0.9), (0.15, 0.3), (0.2, 0.85))
+
+
+def parpadeo_encendido(tiempo: float) -> float:
+    """Opacidad del parpadeo al encender una pantalla, `tiempo` segundos tras abrirla."""
+    for hasta, opacidad in _PARPADEO:
+        if tiempo < hasta:
+            return opacidad
+    return 1.0
+
+
 class PantallaMenu:
     """Base de las pantallas de menú del HUD.
 
@@ -195,7 +208,7 @@ class PantallaMenu:
         self._abierta += dt
         if self._animar:
             avance = min(1.0, self._abierta / _APARICION)
-            self._marco.set_alpha_scale(avance)
+            self._marco.set_alpha_scale(avance * parpadeo_encendido(self._abierta))
             self._marco.set_z(-_DESPLAZAMIENTO * (1 - avance))
         clave = self._clave()
         if clave != self._clave_dibujada or self._contenido is None:

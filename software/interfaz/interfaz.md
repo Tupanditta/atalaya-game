@@ -11,6 +11,7 @@ Interfaz moderna de ciencia ficción, limpia y legible:
 - Sin texturas ni degradados recargados. Un brillo suave solo en los elementos activos.
 - Textos de títulos y cifras en mayúsculas con algo de espaciado entre letras.
 - La escena 3D siempre visible: ningún panel de partida ocupa el centro de la pantalla.
+- Capa holográfica sobre toda la interfaz: líneas de barrido horizontales negras al 7 %, una cada 3 px de pantalla, y una franja de luz **acento** al 6 % que la recorre de arriba abajo en 2,2 s cada 7 s.
 
 ## 2. Medidas y escala
 
@@ -97,12 +98,14 @@ Ver `03-oleada.svg`, `04-apuntando.svg` y `05-aturdido.svg`.
   - aparece un brillo suave **acento** de 8 px bajo los trazos, hasta el 22 %.
 - **Mira al mínimo:** un rombo **acento** de 1,5 px y 7 px de semidiagonal rodea el punto central: el disparo está listo.
 - **Disparo:** un anillo **acento** sale de la mira, se aleja 22 px y se desvanece en 0,18 s.
+- **Acierto:** al alcanzar a un enemigo, un aspa **texto** de cuatro brazos de 9 px, a 6 px del anillo, durante 0,18 s. Al destruirlo, un aspa **peligro** de brazos de 15 px, a 9 px, que se abre un 25 % y se desvanece en 0,45 s. La de destruir no se tapa con la de alcanzar.
 - Empieza centrada en (960, 540) y se mueve con el ratón por toda la pantalla; no sale de ella. Sustituye al cursor, que no se muestra.
 - **Radio en pantalla** = 540 × tan(radio de la mira) ÷ tan(campo de visión ÷ 2). Con los parámetros iniciales:
   - unos 34 px con la mira normal,
   - unos 21 px con la mira al mínimo y el zoom máximo.
 - **Color:** **texto** con la mira normal, que pasa de forma continua a **acento** según el progreso de apuntado.
 - **Desestabilización:** la mira se dibuja desplazada según el desvío de `vista`.
+- **Turbulencia:** al recibir un impacto, la mira tiembla 0,2 s con un desvío del mismo tamaño angular que el de la cámara, solo visual.
 - **Aturdimiento:** la mira se dibuja como un círculo de trazo discontinuo (8 px de trazo y 6 px de hueco) con el punto central, sin marcas ni anillo de disparo, y opacidad al 40 %.
 
 ### Radar (abajo a la izquierda)
@@ -117,10 +120,12 @@ Ver `03-oleada.svg`, `04-apuntando.svg` y `05-aturdido.svg`.
 - **Dentro del campo de visión:** contacto opaco con contorno de 1 px **texto**.
 - **Fuera:** contacto al 70 % de opacidad.
 - **Aviso de disparo:** el contacto del enemigo parpadea dos veces por segundo mientras dura el aviso.
+- **Barrido:** una línea **acento** al 45 % gira desde el centro, una vuelta cada 3 s, con una estela de 45° que se desvanece.
 
 ### Oleada (arriba en el centro)
 - Panel de 360 × 80 px centrado a 32 px del borde superior.
 - `OLEADA 12 / 50` en cifras del HUD y, debajo, `7 ENEMIGOS RESTANTES` en etiqueta.
+- Durante el salto hiperespacial: `SALTO HIPERESPACIAL`, que parpadea en **acento**, y debajo `RUMBO AL SECTOR 2 / 5`. La mira no se muestra.
 
 ### Estado de la estación (abajo a la derecha)
 - Panel de 432 × 120 px anclado al margen inferior derecho.
@@ -208,7 +213,8 @@ El radar, los paneles y los avisos se dibujan encima de la niebla y de los deste
 
 ## 8. Movimiento
 
-- Las pantallas de menú aparecen con un fundido y un desplazamiento vertical de 16 px en 200 ms, y desaparecen con un fundido de 150 ms.
+- Las pantallas de menú aparecen con un fundido y un desplazamiento vertical de 16 px en 200 ms, con un parpadeo de encendido de holograma en sus primeros 200 ms, y desaparecen con un fundido de 150 ms.
+- **Cartel de oleada:** al empezar cada oleada aparece sobre la mira `OLEADA 12` en Rajdhani Bold de 72 px **acento** y, debajo, en etiqueta, `SECTOR 2 · NEBULOSA CARMESÍ` al llegar a un fondo nuevo o `9 HOSTILES DETECTADOS` en las demás. Dos líneas **acento** de 300 px se abren desde el centro en 0,35 s; el cartel se enciende con el mismo parpadeo, dura 2,6 s y se desvanece en el último medio segundo. No se ve en pausa ni en los menús.
 - Al abrir la pausa, el velo se oscurece en 150 ms.
 - Ninguna animación bloquea la entrada: el jugador puede actuar mientras dura.
 

@@ -3,7 +3,8 @@
 Versión de S5: composición completa de cada oleada, con tamaños y tipos mezclados
 (RN-06, RN-16), aparición con su ritmo y el máximo de enemigos activos (RN-43),
 cronómetro y fin de oleada (RN-15), y descanso entre oleadas con su cuenta atrás y su
-fin anticipado (RN-18, RF-44).
+fin anticipado (RN-18, RF-44). Tras el descanso de las oleadas 10, 20, 30 y 40 hay un
+salto hiperespacial al fondo siguiente antes de empezar la oleada (RN-20).
 """
 
 from dataclasses import dataclass
@@ -21,12 +22,15 @@ from atalaya.logica.nucleo.eventos import (
     PartidaAbandonada,
     PartidaGanada,
     PartidaIniciada,
+    SaltoIniciado,
+    SaltoTerminado,
     SolicitudAparicion,
     TerminarDescansoSolicitado,
 )
 from atalaya.logica.parametros.modelo import Parametros
 
-#: Margen para que la suma de pasos en coma flotante no retrase un paso el fin del descanso.
+#: Margen para que la suma de pasos en coma flotante no retrase un paso el fin del descanso
+#: o del salto.
 _TOLERANCIA_TIEMPO = 1e-9
 
 
@@ -86,6 +90,8 @@ class Oleadas:
         self._cronometro_en_marcha = False
         self._en_descanso = False
         self._descanso = 0.0
+        self._en_salto = False
+        self._salto = 0.0
         bus.suscribir(PartidaIniciada, self._al_iniciar_partida)
         bus.suscribir(EnemigoDestruido, self._al_destruir_enemigo)
         bus.suscribir(TerminarDescansoSolicitado, self._al_pedir_fin_descanso)
@@ -101,6 +107,8 @@ class Oleadas:
         self._en_curso = True
         self._en_descanso = False
         self._descanso = 0.0
+        self._en_salto = False
+        self._salto = 0.0
         self._enemigos = len(self._pendientes)
         self._activos = 0
         self._cronometro = 0.0
@@ -113,12 +121,18 @@ class Oleadas:
         """Avanza el cronómetro y pide una aparición cada intervalo si hay hueco (RN-43).
 
         Durante el descanso solo descuenta su tiempo; al llegar a cero, empieza la
-        siguiente oleada (RN-18).
+        siguiente oleada (RN-18) o, si cambia el fondo, el salto. Durante el salto también
+        descuenta su tiempo y, al llegar a cero, empieza la oleada (RN-20).
         """
         if self._en_descanso:
             self._descanso -= dt
             if self._descanso <= _TOLERANCIA_TIEMPO:
                 self._terminar_descanso()
+            return
+        if self._en_salto:
+            self._salto -= dt
+            if self._salto <= _TOLERANCIA_TIEMPO:
+                self._terminar_salto()
             return
         if not self._en_curso:
             return
@@ -181,6 +195,16 @@ class Oleadas:
         return self._descanso
 
     @property
+    def en_salto(self) -> bool:
+        """Indica si la partida está en el salto hiperespacial a otro fondo (RN-20)."""
+        return self._en_salto
+
+    @property
+    def tiempo_salto(self) -> float:
+        """Segundos que le quedan al salto; 0 fuera del salto."""
+        return self._salto
+
+    @property
     def cronometro(self) -> float:
         """Segundos desde que apareció el primer enemigo de la oleada actual."""
         return self._cronometro
@@ -211,10 +235,26 @@ class Oleadas:
         self._bus.publicar(DescansoIniciado(self._descanso, self._numero + 1))
 
     def _terminar_descanso(self) -> None:
-        """Cierra el descanso y empieza la siguiente oleada (RN-18, CU-07 paso 7)."""
+        """Cierra el descanso y empieza la siguiente oleada (RN-18, CU-07 paso 7).
+
+        Si la siguiente oleada es de otro fondo, antes empieza el salto (RN-20).
+        """
         self._en_descanso = False
         self._descanso = 0.0
         self._bus.publicar(DescansoTerminado())
+        if self._parametros.hay_salto_tras(self._numero):
+            self._en_salto = True
+            self._salto = self._parametros.oleadas.duracion_salto
+            fondo = self._parametros.fondo_oleada(self._numero + 1)
+            self._bus.publicar(SaltoIniciado(fondo, self._salto))
+            return
+        self.iniciar_oleada(self._numero + 1)
+
+    def _terminar_salto(self) -> None:
+        """Cierra el salto y empieza la siguiente oleada en el fondo nuevo (RN-20)."""
+        self._en_salto = False
+        self._salto = 0.0
+        self._bus.publicar(SaltoTerminado())
         self.iniciar_oleada(self._numero + 1)
 
     def _al_pedir_fin_descanso(self, evento: TerminarDescansoSolicitado) -> None:
@@ -226,6 +266,8 @@ class Oleadas:
         self._en_curso = False
         self._en_descanso = False
         self._descanso = 0.0
+        self._en_salto = False
+        self._salto = 0.0
         self._cronometro_en_marcha = False
         self._pendientes = []
         self._activos = 0
